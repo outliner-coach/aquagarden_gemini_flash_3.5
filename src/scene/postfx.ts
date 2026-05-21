@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
@@ -86,15 +85,9 @@ export function createPostFX(
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
 
-  // 피사계심도(DoF) — 물속을 들여다보는 매크로 감성. "약하게"(maxblur 작게, 멀미 방지).
-  // 초점은 어항 중심 부근, 배경/원경만 부드럽게 풀린다.
-  // 초점은 피사체(중경 바위·베타) 거리(≈21), 전경 수초·배경 유리만 부드럽게 풀린다.
-  const bokeh = new BokehPass(scene, camera, {
-    focus: 21.0,
-    aperture: 0.0016,
-    maxblur: 0.014,
-  });
-  composer.addPass(bokeh);
+  // 주의: DoF(BokehPass)는 의도적으로 제거했다. 자유롭게 줌인/줌아웃하며 감상하는 위젯에서는
+  // 깊이 기반 블러가 어느 줌 레벨에서든 씬을 흐리게 만들어 "해상도 흐림"으로 체감된다.
+  // 시네마틱 깊이감은 포그(깊이 색 감쇠)·코스틱·Bloom으로 충분히 살리고, 선명도를 우선한다.
 
   // 은은한 Bloom — 발광(네온테트라 스트라이프)·코스틱·갓레이·하이라이트가 실제로 번지게.
   // threshold를 낮춰 밝은 요소가 잡히되, strength는 절제해 화면 전체 blown-out은 피한다.
@@ -116,8 +109,9 @@ export function createPostFX(
   let frame = 0;
   return {
     setSize(width: number, height: number): void {
+      // composer.setSize는 내부 _pixelRatio(=renderer.getPixelRatio())를 곱해 각 pass에
+      // 실제 픽셀 해상도로 전달하므로 bloom 등은 자동 갱신된다(수동 setSize 불필요).
       composer.setSize(width, height);
-      bloom.setSize(width, height);
     },
     render(): void {
       grade.uniforms.uFrame.value = (frame++ % 1024) * 0.137; // 그레인 프레임 변주

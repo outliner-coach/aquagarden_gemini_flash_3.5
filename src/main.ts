@@ -120,8 +120,8 @@ function closeQuoteCard(): void {
 }
 
 // --- 조명 모드 버튼 UI 상태 ---
-const ACTIVE_BTN = 'px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 bg-emerald-500 text-slate-950 shadow';
-const IDLE_BTN = 'px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 text-slate-300 hover:bg-slate-800/50 transition-all duration-300';
+const ACTIVE_BTN = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors bg-emerald-500 text-slate-950';
+const IDLE_BTN = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-300 hover:bg-slate-700/50 transition-colors';
 
 function setLightMode(lighting: Lighting, mode: LightMode): void {
   lighting.setMode(mode);

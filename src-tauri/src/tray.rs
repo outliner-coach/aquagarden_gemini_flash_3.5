@@ -32,10 +32,11 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
             _ => {}
         });
 
-    // 트레이 아이콘은 앱 기본 창 아이콘 재사용. macOS 메뉴바는 템플릿 모드 권장.
-    if let Some(icon) = app.default_window_icon().cloned() {
-        builder = builder.icon(icon).icon_as_template(true);
-    }
+    // 메뉴바 전용 단색 템플릿 아이콘(물고기 실루엣). 컬러 앱 아이콘을 메뉴바에 쓰면
+    // 작게 줄었을 때 흐릿한 덩어리로 보여 못 찾는다 → 단색+알파 템플릿이 메뉴바에서 또렷.
+    // icon_as_template(true)로 macOS 라이트/다크 메뉴바에 자동 적응시킨다.
+    let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template.png"))?;
+    builder = builder.icon(tray_icon).icon_as_template(true);
 
     builder.build(app)?;
     Ok(())
