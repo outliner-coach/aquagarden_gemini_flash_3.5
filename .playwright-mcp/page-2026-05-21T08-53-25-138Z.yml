@@ -1,0 +1,39 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - heading "수족관 조성 중..." [level=1] [ref=e5]
+    - paragraph [ref=e6]: 자연 경관, 수초, 물고기 생태계를 생성하고 있습니다.
+  - generic:
+    - banner [ref=e7]:
+      - generic [ref=e10]:
+        - heading "3D 디지털 아쿠아스케이프" [level=1] [ref=e11]
+        - paragraph [ref=e12]: 사진 기반의 자연 생태 어항
+      - generic [ref=e13]:
+        - button "맑은 낮" [ref=e14] [cursor=pointer]:
+          - generic [ref=e15]: 맑은 낮
+        - button "노을빛" [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: 노을빛
+        - button "신비로운 밤" [ref=e18] [cursor=pointer]:
+          - generic [ref=e19]: 신비로운 밤
+    - generic:
+      - button "✕" [ref=e20] [cursor=pointer]
+      - generic: 유목
+      - paragraph: "\"많은 사람들이 평생을 낚시를 하면서도, 그들이 추구하는 것이 물고기가 아니라는 것을 깨닫지 못한다.\""
+      - paragraph: "- 헨리 데이비드 소로우"
+      - paragraph: 빈 공간을 클릭하면 창이 닫힙니다
+    - contentinfo:
+      - generic [ref=e21]:
+        - generic [ref=e22]: 아쿠아리움 가이드
+        - generic [ref=e23]: 마우스 드래그 / 화면 터치로 360도 회전
+        - generic [ref=e24]: 마우스 휠 / 두 손가락 핀치로 줌인/아웃
+        - generic [ref=e25]: 물고기, 유목, 바위, 노란 오리를 클릭하여 명언 감상
+      - generic [ref=e26]:
+        - generic [ref=e27]: 수족관 생물 사전
+        - generic [ref=e28]:
+          - generic [ref=e29]: 붉은 베타 (수련자)
+          - generic [ref=e31]: 1 마리
+        - generic [ref=e32]:
+          - generic [ref=e33]: 네온테트라 (군무)
+          - generic [ref=e35]: 6 마리
+        - generic [ref=e36]:
+          - generic [ref=e37]: 코리도라스 (바닥 청소부)
+          - generic [ref=e39]: 3 마리
