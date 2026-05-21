@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "scene-port",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-21T17:45:56+0900",
+      "completed_at": "2026-05-21T18:05:00+0900",
+      "summary": "prototype.html 인라인 스크립트를 ESM 모듈로 외과적 이식(동작 보존). npm three@0.184(+@types/three) — CDN r128 제거. src/scene/aquascape.ts(buildAquascape→유리/모래/소일/수면/바위8/유목/오리/수초110/기포70, animatePlants·animateBubbles export, tankW/H/D 상수), src/scene/lighting.ts(Lighting 클래스: ambient/dir/spot + colors 팔레트 + setMode/update 보간), src/scene/fauna/fish.ts(Fish 클래스 betta/tetra/corydoras boids타겟추적·꼬리흔들기 + spawnFauna, 공통 group/update). main.ts가 scene/camera/renderer/OrbitControls 초기화+animate 루프+raycast 클릭명언(quotes 데이터·triggerQuote)+조명버튼 배선. r128→0.184 API 변경은 OrbitControls 임포트(three/addons/...)만 — 색공간 등 기본값 유지(미화는 step4). index.html에 canvas+오버레이(로딩/조명셀렉터/명언카드/가이드/생물사전) 이식, FontAwesome·GoogleFonts·Tailwind CDN 전부 제거(아이콘은 텍스트/✕로 대체). styles.css의 .glassmorphism은 backdrop-filter:blur 제거(CLAUDE.md 안티슬롭 준수, 단색 반투명만). 검증: tsc/lint/build/test 전부 통과 + 헤드리스(playwright preview)로 씬 렌더·물고기3종·수초·기포·낮↔밤 조명전환·유목 클릭명언 동작 확인(런타임 에러 0, favicon 404만). 미화/포스트프로세싱 미추가."
     },
     {
       "step": 3,

@@ -2,16 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 투명·프레임리스 위젯 — 창 배경은 비워두고 씬이 채운다. */
+/* 투명·프레임리스 위젯 — 창 배경은 비워두고 씬(canvas)이 채운다. */
 html,
 body {
   margin: 0;
   height: 100%;
   background: transparent;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family:
+    'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
 }
 
-#app {
-  height: 100vh;
-  width: 100vw;
+/*
+ * 프로토타입의 .glassmorphism 을 이식하되 backdrop-filter: blur() 는 제거한다.
+ * CLAUDE.md 안티슬롭 규율(도구 표면 glass morphism 금지) 준수 — 단색 반투명만.
+ */
+.glassmorphism {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.quote-font {
+  font-family: 'Noto Sans KR', 'Playfair Display', serif;
 }
