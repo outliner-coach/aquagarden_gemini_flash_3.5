@@ -81,29 +81,38 @@ export class Fish {
     this.tailBase.add(tailBaseMesh);
 
     if (this.type === 'betta') {
-      // 흐르는 거대 꼬리지느러미
-      const finGeo = new THREE.PlaneGeometry(3.0, 2.5, 6, 6);
-      finGeo.translate(-1.5, 0, 0);
-      const finMat = new THREE.MeshPhysicalMaterial({
+      // 흐르는 베일테일 — 불투명 판때기 대신 반투명 베일(depthWrite off로 부드럽게 겹침).
+      const finGeo = new THREE.PlaneGeometry(2.4, 1.9, 6, 6);
+      finGeo.translate(-1.2, 0, 0);
+      // 사각 패널을 베일테일로 — 몸쪽은 좁고 꼬리 끝으로 갈수록 부채처럼 펼쳐지게 테이퍼.
+      const finPos = finGeo.attributes.position;
+      for (let i = 0; i < finPos.count; i++) {
+        const x = finPos.getX(i); // [-2.4, 0]
+        const tEdge = THREE.MathUtils.clamp(-x / 2.4, 0, 1); // 0=몸통, 1=꼬리끝
+        const widthScale = 0.2 + tEdge * 1.05;
+        finPos.setY(i, finPos.getY(i) * widthScale);
+      }
+      finGeo.computeVertexNormals();
+      const finMat = new THREE.MeshStandardMaterial({
         color: colorHex,
         transparent: true,
-        opacity: 0.82,
+        opacity: 0.45,
         side: THREE.DoubleSide,
-        transmission: 0.6,
-        roughness: 0.2,
+        roughness: 0.35,
+        metalness: 0.0,
+        depthWrite: false,
       });
       this.tailFin = new THREE.Mesh(finGeo, finMat);
-      this.tailFin.castShadow = true;
       this.tailBase.add(this.tailFin);
 
-      const dFinGeo = new THREE.PlaneGeometry(1.8, 1.5, 4, 4);
-      dFinGeo.translate(-0.3, 0.9, 0);
+      const dFinGeo = new THREE.PlaneGeometry(1.4, 1.2, 4, 4);
+      dFinGeo.translate(-0.3, 0.7, 0);
       const dFin = new THREE.Mesh(dFinGeo, finMat);
       dFin.rotation.z = -0.3;
       this.group.add(dFin);
 
-      const vFinGeo = new THREE.PlaneGeometry(1.8, 1.5, 4, 4);
-      vFinGeo.translate(-0.3, -0.9, 0);
+      const vFinGeo = new THREE.PlaneGeometry(1.4, 1.2, 4, 4);
+      vFinGeo.translate(-0.3, -0.7, 0);
       const vFin = new THREE.Mesh(vFinGeo, finMat);
       vFin.rotation.z = 0.3;
       this.group.add(vFin);
@@ -179,13 +188,37 @@ export class Fish {
     this.currentSpeed = this.baseSpeed * (0.8 + random() * 0.5);
   }
 
-  update(delta: number, time: number): void {
+  update(delta: number, time: number, flock?: Fish[]): void {
     const distanceToTarget = this.position.distanceTo(this.target);
     if (distanceToTarget < 2.0) {
       this.pickNewTarget();
     }
 
     const dir = new THREE.Vector3().subVectors(this.target, this.position).normalize();
+
+    // 테트라 군영: 같은 종 이웃과 응집(cohesion) + 근접 분리(separation)를 진행 방향에 섞어
+    // 무리지어 헤엄치게 한다(일률적 직선 금지). 결정론적(난수 없음).
+    if (this.type === 'tetra' && flock) {
+      const center = new THREE.Vector3();
+      const sep = new THREE.Vector3();
+      let n = 0;
+      for (const other of flock) {
+        if (other === this || other.type !== 'tetra') continue;
+        center.add(other.position);
+        n++;
+        const d = this.position.distanceTo(other.position);
+        if (d > 0 && d < 2.0) {
+          sep.add(new THREE.Vector3().subVectors(this.position, other.position).divideScalar(d));
+        }
+      }
+      if (n > 0) {
+        center.divideScalar(n);
+        const cohesion = new THREE.Vector3().subVectors(center, this.position).normalize();
+        dir.addScaledVector(cohesion, 0.5);
+        dir.addScaledVector(sep, 0.35);
+        dir.normalize();
+      }
+    }
 
     // 진행 방향으로 점진 선회
     const targetRotation = Math.atan2(-dir.z, dir.x);
@@ -218,7 +251,7 @@ export class Fish {
 export function spawnFauna(scene: THREE.Scene): Fish[] {
   const fishList: Fish[] = [];
 
-  fishList.push(new Fish(scene, 'betta', 0xd32f2f, [1.1, 1.1, 1.1], 1.4));
+  fishList.push(new Fish(scene, 'betta', 0xd32f2f, [0.85, 0.85, 0.85], 1.4));
 
   for (let i = 0; i < 6; i++) {
     fishList.push(new Fish(scene, 'tetra', 0x3a3a3a, [0.45, 0.45, 0.45], 3.8));

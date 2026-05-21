@@ -13,7 +13,7 @@ import { chromium } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
-const OUT_DIR = resolve(root, 'phases/0-mvp/captures/step3');
+const OUT_DIR = resolve(root, 'phases/0-mvp/captures/step4');
 
 const SEED = 1337;
 const CAMERAS = ['front', 'driftwood', 'foreground'];

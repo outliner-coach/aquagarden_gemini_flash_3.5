@@ -11,9 +11,9 @@ export const tankDepth = 11;
 
 export interface PlantSway {
   nodes: THREE.Object3D[];
-  speed: number;
-  amplitude: number;
-  offset: number;
+  // 흐름장(flow field) 기반 흔들림 — 위상은 월드 좌표에서 유도(공유 흐름), per-plant 독립 사인파 금지.
+  pos: THREE.Vector3;
+  sway: number; // 작은 진폭 변주(기계적 균일 회피, 흐름 방향·속도는 공유)
 }
 
 export interface Aquascape {
@@ -125,9 +125,8 @@ function createSwayingPlant(
 
   animatedPlants.push({
     nodes: segmentList,
-    speed: 1.2 + random() * 1.0,
-    amplitude: 0.05 + random() * 0.06,
-    offset: random() * Math.PI * 2,
+    pos: pos.clone(),
+    sway: 0.85 + random() * 0.3,
   });
 }
 
@@ -157,7 +156,7 @@ function spawnBubbles(scene: THREE.Scene, bubbles: THREE.Mesh[], count: number):
   const bubbleMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.45,
     roughness: 0.0,
     metalness: 0.1,
     transmission: 0.9,
@@ -205,9 +204,9 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
   }
   sandGeo.computeVertexNormals();
   const sandMat = new THREE.MeshStandardMaterial({
-    color: 0x9c8266,
-    roughness: 0.9,
-    metalness: 0.05,
+    color: 0x5b4f3a, // 어두운 아쿠아소일 톤(밝은 모래 대신, §2 팔레트)
+    roughness: 0.95,
+    metalness: 0.02,
     flatShading: true,
   });
   const sandMesh = new THREE.Mesh(sandGeo, sandMat);
@@ -331,27 +330,27 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
   clickable.push(duckGroup);
   scene.add(duckGroup);
 
-  // 4. 수초 — 좌측 녹색 이끼/풀, 우측 적색 줄기수초
-  for (let i = 0; i < 40; i++) {
-    const x = -10 + random() * 4.5;
-    const z = -4 + random() * 6;
+  // 4. 수초 — 좌측 녹색 이끼/풀(무성하게), 우측 적색 줄기수초. §2 팔레트.
+  for (let i = 0; i < 58; i++) {
+    const x = -10 + random() * 5;
+    const z = -4 + random() * 6.5;
     const y = getSubstrateHeight(x, z) + 0.2;
     const height = 0.8 + random() * 1.5;
-    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x4caf50, 0.06);
+    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x4f8a32, 0.06);
   }
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < 32; i++) {
     const x = -3 + random() * 7;
     const z = -2 + random() * 4;
     const y = getSubstrateHeight(x, z) + 0.1;
     const height = 1.0 + random() * 1.8;
-    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x81c784, 0.05);
+    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x6fae3f, 0.05);
   }
-  for (let i = 0; i < 45; i++) {
+  for (let i = 0; i < 52; i++) {
     const x = 7 + random() * 4.5;
     const z = -3.5 + random() * 6.5;
     const y = getSubstrateHeight(x, z) + 0.2;
     const height = 1.8 + random() * 3.5;
-    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0xd81b60, 0.08);
+    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x9c2f2b, 0.08);
   }
 
   // 5. 기포
@@ -360,13 +359,21 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
   return { animatedPlants, bubbles, clickable };
 }
 
-// 수초 흔들림: 마디마다 위상 지연을 누적해 물결처럼 캐스케이드.
+// 수초 흔들림: 공유 흐름장. 위상을 월드 좌표(x·z)에서 유도해 전 수초가 한 물살처럼 함께 흔들린다.
+// 마디 끝(tip)으로 갈수록 진폭이 커지고, 마디 위상 지연으로 물결이 캐스케이드한다.
+const FLOW_SPEED = 0.9;
+const FLOW_AMP = 0.13;
+
 export function animatePlants(plants: PlantSway[], time: number): void {
   plants.forEach((plant) => {
+    const flowPhase = time * FLOW_SPEED + plant.pos.x * 0.18 + plant.pos.z * 0.12;
+    const segCount = plant.nodes.length;
     plant.nodes.forEach((node, idx) => {
-      const phase = time * plant.speed + plant.offset + idx * 0.4;
-      node.rotation.z = Math.sin(phase) * plant.amplitude;
-      node.rotation.x = Math.cos(phase * 0.5) * (plant.amplitude * 0.5);
+      const tip = (idx + 1) / segCount; // 끝마디일수록 크게 흔들림
+      const phase = flowPhase + idx * 0.5;
+      const amp = FLOW_AMP * tip * plant.sway;
+      node.rotation.z = Math.sin(phase) * amp;
+      node.rotation.x = Math.cos(phase * 0.7) * amp * 0.5;
     });
   });
 }

@@ -4,6 +4,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildAquascape, animatePlants, animateBubbles, tankHeight } from './scene/aquascape';
 import { Lighting, colors, type LightMode } from './scene/lighting';
 import { spawnFauna } from './scene/fauna/fish';
+import { createGodRays } from './scene/godrays';
+import { setupRenderer, createPostFX } from './scene/postfx';
 import { seedRng } from './lib/rng';
 import { cameraPresets, type CameraName } from './scene/cameraPresets';
 
@@ -168,11 +170,16 @@ function init(): void {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setClearColor(colors.day.bg);
+  setupRenderer(renderer); // 시네마틱 색관리(ACESFilmic 톤매핑 + sRGB)
 
   // Lighting / scene contents
   const lighting = new Lighting(scene, tankHeight);
   const aquascape = buildAquascape(scene);
   const fishList = spawnFauna(scene);
+  createGodRays(scene); // 상단 광원에서 떨어지는 미세한 빛줄기(정적)
+
+  // 시네마틱 포스트프로세싱(은은한 Bloom + DoF + 톤매핑 마감). 캡처·일반 경로 공통.
+  const postfx = createPostFX(renderer, scene, camera);
 
   // --- 캡처 모드: 고정 카메라 프리셋 + 결정론적 프레임. 입력/컨트롤 없음. ---
   if (capture) {
@@ -187,11 +194,11 @@ function init(): void {
         requestAnimationFrame(renderClip);
         const delta = clock.getDelta();
         const time = clock.getElapsedTime();
-        lighting.update(renderer, scene);
+        lighting.update(renderer, scene, time);
         animatePlants(aquascape.animatedPlants, time);
         animateBubbles(aquascape.bubbles, delta, time);
-        fishList.forEach((fish) => fish.update(delta, time));
-        renderer.render(scene, camera);
+        fishList.forEach((fish) => fish.update(delta, time, fishList));
+        postfx.render();
       };
       renderClip();
       window.__captureReady = true;
@@ -202,12 +209,12 @@ function init(): void {
     let t = 0;
     for (let i = 0; i < CAPTURE_WARMUP_STEPS; i++) {
       t += CAPTURE_FIXED_DELTA;
-      lighting.update(renderer, scene);
+      lighting.update(renderer, scene, t);
       animatePlants(aquascape.animatedPlants, t);
       animateBubbles(aquascape.bubbles, CAPTURE_FIXED_DELTA, t);
-      fishList.forEach((fish) => fish.update(CAPTURE_FIXED_DELTA, t));
+      fishList.forEach((fish) => fish.update(CAPTURE_FIXED_DELTA, t, fishList));
     }
-    renderer.render(scene, camera);
+    postfx.render();
     window.__captureReady = true;
     return;
   }
@@ -262,6 +269,7 @@ function init(): void {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    postfx.setSize(window.innerWidth, window.innerHeight);
   });
 
   // Render loop
@@ -272,12 +280,12 @@ function init(): void {
     const time = clock.getElapsedTime();
 
     controls.update();
-    lighting.update(renderer, scene);
+    lighting.update(renderer, scene, time);
     animatePlants(aquascape.animatedPlants, time);
     animateBubbles(aquascape.bubbles, delta, time);
-    fishList.forEach((fish) => fish.update(delta, time));
+    fishList.forEach((fish) => fish.update(delta, time, fishList));
 
-    renderer.render(scene, camera);
+    postfx.render();
   }
   animate();
 
