@@ -15,7 +15,7 @@
       "name": "tauri-vite-setup",
       "status": "completed",
       "started_at": "2026-05-21T17:35:30+0900",
-      "completed_at": "2026-05-21T17:50:00+0900",
+      "completed_at": "2026-05-21T17:45:56+0900",
       "summary": "Tauri v2 + Vite + TS(strict) 스캐폴드. AC 전부 통과(npm run lint/build, cargo check, tsc --noEmit, vitest). 프론트: Vite6+TS strict, Tailwind v3 npm+PostCSS(CDN 0), ESLint9 flat+typescript-eslint, vitest(--passWithNoTests). 진입점 src/main.ts(스텁), src/window/(setClickThrough→invoke), src/settings/(plugin-store load 래퍼 스텁). Rust: src-tauri lib/main 분리, tauri.conf.json 단일 창블록(transparent·alwaysOnTop·decorations:false·skipTaskbar·shadow:false·480x320, macOSPrivateApi:true), CSP connect-src 'none'(+default/script/img/style 'self', style unsafe-inline), updater 미설정+createUpdaterArtifacts:false. tray.rs(표시·숨김/설정placeholder/종료, default_window_icon 템플릿), window.rs(set_click_through command, 기본 입력수신), lib.rs setup서 macOS ActivationPolicy::Accessory로 Dock 숨김+tauri-plugin-store 등록. capabilities/default.json은 core:default+store:default만(fs/http/shell 없음, ~/.claude 읽기는 step5). 기존 프로토타입 index.html→prototype.html로 보존(step2 이식 원본; Vite 기본 진입은 새 index.html). 아이콘은 sample.jpeg→PIL로 RGBA PNG/icns 생성(Tauri codegen RGBA 필수). 투명·always-on-top·프레임리스 창+트레이 표시는 GUI(npm run dev) 수동 확인 대상. 환경: rustup으로 Rust 1.95 stable 설치함."
     },
     {
