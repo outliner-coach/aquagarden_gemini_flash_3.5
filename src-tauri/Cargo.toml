@@ -1,0 +1,24 @@
+[package]
+name = "aquagarden"
+version = "0.1.0"
+description = "Aquagarden — 관상용 3D 어항 데스크톱 위젯"
+authors = ["Aquagarden"]
+edition = "2021"
+
+[lib]
+# Tauri v2 컨벤션: 셸 로직은 lib에, main.rs는 진입점만.
+name = "aquagarden_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api", "tray-icon", "image-png"] }
+tauri-plugin-store = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+# 프로덕션 빌드에서 콘솔 비활성 등 기본 동작은 main.rs cfg로 처리.
+custom-protocol = ["tauri/custom-protocol"]

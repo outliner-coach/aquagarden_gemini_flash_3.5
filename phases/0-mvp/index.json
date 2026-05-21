@@ -5,14 +5,18 @@
     {
       "step": 0,
       "name": "spikes",
-      "status": "blocked",
+      "status": "completed",
       "started_at": "2026-05-21T17:06:53+0900",
-      "blocked_reason": "Spike A 출력 수치(컨텍스트%·토큰)를 사용자가 실제 Claude Code /usage 표시와 눈으로 대조 확인해야 함. 일치하면 step0를 completed로 바꾸고 재실행."
+      "completed_at": "2026-05-21T17:09:05+0900",
+      "summary": "검증 완료(사용자 수치 대조 OK). scripts/spike_usage.py: ~/.claude/projects/**/*.jsonl 파싱 → 컨텍스트점유 = 최신 assistant 메시지의 input+cache_creation+cache_read, model→한도 매핑(claude-opus-4-7=1,000,000), 현재 세션 21.6%. haiku는 한도 미매핑(v2에서 200K 정밀화). Tauri(phases/0-mvp/spike-tauri.md): macOS는 transparent에 macOSPrivateApi:true 필수(App Store 불가, 로컬배포라 무관), skipTaskbar 미지원 → main.rs에서 ActivationPolicy::Accessory로 Dock 숨김, setIgnoreCursorEvents(클릭통과)·tray-icon·tauri-plugin-store 사용가능. spike-tauri.md에 tauri.conf.json 창블록+CSP(connect-src 'none') 초안 포함 — step1에서 사용."
     },
     {
       "step": 1,
       "name": "tauri-vite-setup",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-21T17:35:30+0900",
+      "completed_at": "2026-05-21T17:50:00+0900",
+      "summary": "Tauri v2 + Vite + TS(strict) 스캐폴드. AC 전부 통과(npm run lint/build, cargo check, tsc --noEmit, vitest). 프론트: Vite6+TS strict, Tailwind v3 npm+PostCSS(CDN 0), ESLint9 flat+typescript-eslint, vitest(--passWithNoTests). 진입점 src/main.ts(스텁), src/window/(setClickThrough→invoke), src/settings/(plugin-store load 래퍼 스텁). Rust: src-tauri lib/main 분리, tauri.conf.json 단일 창블록(transparent·alwaysOnTop·decorations:false·skipTaskbar·shadow:false·480x320, macOSPrivateApi:true), CSP connect-src 'none'(+default/script/img/style 'self', style unsafe-inline), updater 미설정+createUpdaterArtifacts:false. tray.rs(표시·숨김/설정placeholder/종료, default_window_icon 템플릿), window.rs(set_click_through command, 기본 입력수신), lib.rs setup서 macOS ActivationPolicy::Accessory로 Dock 숨김+tauri-plugin-store 등록. capabilities/default.json은 core:default+store:default만(fs/http/shell 없음, ~/.claude 읽기는 step5). 기존 프로토타입 index.html→prototype.html로 보존(step2 이식 원본; Vite 기본 진입은 새 index.html). 아이콘은 sample.jpeg→PIL로 RGBA PNG/icns 생성(Tauri codegen RGBA 필수). 투명·always-on-top·프레임리스 창+트레이 표시는 GUI(npm run dev) 수동 확인 대상. 환경: rustup으로 Rust 1.95 stable 설치함."
     },
     {
       "step": 2,
