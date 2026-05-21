@@ -47,7 +47,7 @@
       "name": "usage-core-basic",
       "status": "completed",
       "started_at": "2026-05-21T19:30:48+0900",
-      "completed_at": "2026-05-21T19:45:00+0900",
+      "completed_at": "2026-05-21T19:37:38+0900",
       "summary": "src-tauri/src/usage.rs (TDD): 로컬 Claude Code 세션에서 현재 세션 컨텍스트%·토큰만 안전하게 읽어 숫자로만 emit. parse_session_file(path)→UsageSnapshot{context_tokens=최신 assistant의 input+cache_creation+cache_read, context_limit:Option(claude-opus-4-7*=1_000_000, 그 외 None), context_pct:Option(한도 Some&&>0일 때만, 0나눗셈 가드), cumulative_output_tokens=세션 output 합, model:Option}. 세션 파일은 내부 유도(호출자 경로 인자 없음, path traversal 차단): HOME/.claude/projects에서 cwd 인코딩(영숫자 외 전부 '-') 매칭 폴더의 최신 .jsonl 우선, 없으면 전 프로젝트 최신 mtime 폴백. start_usage_polling: 백그라운드 스레드가 즉시 1회+3s 간격으로 'usage://snapshot' 이벤트 emit(lib.rs setup서 배선). 견고성: File::open 실패/UTF-8 오류/잘린 JSON 줄/usage 없는 assistant 줄/누락 필드/알 수 없는 모델/빈 디렉토리 전부 해당 줄·파일만 skip, unwrap/expect/panic 0(unwrap_or류만). 세션 못 찾으면 UsageSnapshot::empty()(model None=데이터 없음, 어항 무중단). 골든 픽스처 5종(normal/truncated/missing_fields/unknown_model/empty)+없는 파일 → tests/usage_parsing.rs 7케이스 전부 통과(cargo test), cargo check OK. capabilities/default.json: ~/.claude 읽기는 Rust std::fs에서만 처리하므로 웹뷰 fs 권한 미부여(capabilities는 webview→IPC만 게이트, std::fs는 비대상)—core:default+store:default 유지, 설명에 사유 기록. IPC 페이로드 숫자·모델 id만(메시지 본문 0). 실데이터 스모크: cwd 매칭 세션 정확 선택 확인(opus-4-7 8.2% 등). 한도 근사(롤링5h)·사용량↔어항 연동은 v2(미구현)."
     },
     {
