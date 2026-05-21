@@ -30,7 +30,7 @@ function getSubstrateHeight(x: number, z: number): number {
   return -tankHeight / 2 + vy + 1;
 }
 
-// Ohko Stone 풍 절차적 바위. 정점을 흩뜨려 거친 실루엣을 만든다.
+// 세이류석 풍 절차적 바위 — 회녹색 층상석. 정점을 흩뜨려 거친 실루엣 + 층 디테일.
 function createProceduralRock(
   scale: [number, number, number],
   pos: [number, number, number],
@@ -38,24 +38,27 @@ function createProceduralRock(
   type: string,
   clickable: THREE.Object3D[],
 ): THREE.Mesh {
-  const rockGeo = new THREE.DodecahedronGeometry(1, 1);
+  // 디테일 단계를 올려(2) 면이 더 많아 거친 암석 실루엣을 낸다.
+  const rockGeo = new THREE.DodecahedronGeometry(1, 2);
 
   const position = rockGeo.attributes.position;
   for (let i = 0; i < position.count; i++) {
     const vx = position.getX(i);
     const vy = position.getY(i);
     const vz = position.getZ(i);
-    const d = 0.25;
-    position.setX(i, vx + (random() - 0.5) * d);
-    position.setY(i, vy + (random() - 0.5) * d);
-    position.setZ(i, vz + (random() - 0.5) * d);
+    const d = 0.22;
+    // 수평 층(strata)을 강조 — y 높이에 따라 안팎으로 밀어 층상석 느낌.
+    const strata = Math.sin(vy * 6.0) * 0.08;
+    position.setX(i, vx + (random() - 0.5) * d + vx * strata);
+    position.setY(i, vy + (random() - 0.5) * d * 0.6);
+    position.setZ(i, vz + (random() - 0.5) * d + vz * strata);
   }
   rockGeo.computeVertexNormals();
 
   const rockMat = new THREE.MeshStandardMaterial({
-    color: 0x7a6350,
-    roughness: 0.9,
-    metalness: 0.15,
+    color: 0x7d847a, // 회녹색 세이류석 (§2 팔레트, 갈색 블록 탈피)
+    roughness: 0.92,
+    metalness: 0.04,
     flatShading: true,
   });
 
@@ -68,6 +71,35 @@ function createProceduralRock(
   mesh.userData = { interactiveType: type };
 
   clickable.push(mesh);
+  return mesh;
+}
+
+// 모스(이끼) 덩어리 — 돌·중경에 무성한 녹색을 입히는 저폴리 블롭. 레퍼런스의 정글감 핵심.
+// 가벼운 단일 메시(IcosahedronGeometry). 표면을 울퉁불퉁하게 흩뜨려 덩어리진 모스 질감.
+function createMossClump(
+  pos: THREE.Vector3,
+  radius: number,
+  colorHex: number,
+): THREE.Mesh {
+  const geo = new THREE.IcosahedronGeometry(radius, 1);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const f = 0.65 + random() * 0.7;
+    p.setX(i, p.getX(i) * f);
+    p.setY(i, p.getY(i) * f * 0.72); // 납작하게(바닥에 깔린 모스)
+    p.setZ(i, p.getZ(i) * f);
+  }
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({
+    color: colorHex,
+    roughness: 0.95,
+    metalness: 0.0,
+    flatShading: true,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.copy(pos);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
   return mesh;
 }
 
@@ -256,6 +288,18 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
   ];
   rockData.forEach((r) => {
     scene.add(createProceduralRock(r.scale, r.pos, r.rot, r.type, clickable));
+    // 돌마다 윗면에 모스 덩어리 몇 개 — 레퍼런스의 이끼 덮인 층상석.
+    const mossCount = 2 + Math.floor(random() * 3);
+    for (let m = 0; m < mossCount; m++) {
+      const mr = 0.35 + random() * 0.5;
+      const mossPos = new THREE.Vector3(
+        r.pos[0] + (random() - 0.5) * r.scale[0] * 1.4,
+        r.pos[1] + r.scale[1] * 0.5 + random() * 0.3,
+        r.pos[2] + (random() - 0.5) * r.scale[2] * 1.4,
+      );
+      const green = m % 2 === 0 ? 0x4a7a2e : 0x5f9636;
+      scene.add(createMossClump(mossPos, mr, green));
+    }
   });
 
   // 2. 유목 (좌측 언덕 분기 구조)
@@ -331,26 +375,51 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
   scene.add(duckGroup);
 
   // 4. 수초 — 좌측 녹색 이끼/풀(무성하게), 우측 적색 줄기수초. §2 팔레트.
-  for (let i = 0; i < 58; i++) {
-    const x = -10 + random() * 5;
-    const z = -4 + random() * 6.5;
+  //    색을 미세 변주(±)해 단색 균일 회피, 정글의 자연스러운 톤 편차를 낸다.
+  const greenish = (): number => {
+    // 톤 변주는 좁게 — 형광 라임 아웃라이어(평면 무광 페이스가 튀어 보임) 회피.
+    const g = 0x4a7e2e;
+    const j = Math.floor((random() - 0.5) * 0x0c0a06);
+    return THREE.MathUtils.clamp(g + j, 0x3a661f, 0x60963a);
+  };
+  for (let i = 0; i < 78; i++) {
+    const x = -10.5 + random() * 5.5;
+    const z = -4.2 + random() * 7;
     const y = getSubstrateHeight(x, z) + 0.2;
-    const height = 0.8 + random() * 1.5;
-    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x4f8a32, 0.06);
+    const height = 0.8 + random() * 1.6;
+    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, greenish(), 0.06);
   }
-  for (let i = 0; i < 32; i++) {
-    const x = -3 + random() * 7;
-    const z = -2 + random() * 4;
+  for (let i = 0; i < 46; i++) {
+    const x = -4 + random() * 9;
+    const z = -2.5 + random() * 5;
     const y = getSubstrateHeight(x, z) + 0.1;
-    const height = 1.0 + random() * 1.8;
+    const height = 1.0 + random() * 1.9;
     createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x6fae3f, 0.05);
   }
-  for (let i = 0; i < 52; i++) {
-    const x = 7 + random() * 4.5;
-    const z = -3.5 + random() * 6.5;
+  for (let i = 0; i < 62; i++) {
+    const x = 6.5 + random() * 5;
+    const z = -3.8 + random() * 7;
     const y = getSubstrateHeight(x, z) + 0.2;
     const height = 1.8 + random() * 3.5;
-    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x9c2f2b, 0.08);
+    // 적색 줄기수초도 톤 변주(자홍~심홍).
+    const red = random() < 0.5 ? 0x9c2f2b : 0xb0432f;
+    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, red, 0.08);
+  }
+  // 전경 카펫 — 키 작고 빽빽한 녹색 풀로 앞쪽 밀도를 채워 깊이 레이어를 강화.
+  for (let i = 0; i < 40; i++) {
+    const x = -9 + random() * 18;
+    const z = 1.5 + random() * 3.5; // 카메라 가까운 전경
+    const y = getSubstrateHeight(x, z) + 0.1;
+    const height = 0.5 + random() * 0.8;
+    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, greenish(), 0.05);
+  }
+  // 중경 모스 덩어리 — 돌 사이·바닥에 흩어 무성한 정글 바닥을 만든다.
+  for (let i = 0; i < 22; i++) {
+    const x = -8 + random() * 16;
+    const z = -3 + random() * 6;
+    const y = getSubstrateHeight(x, z) + 0.25;
+    const green = random() < 0.5 ? 0x456f2a : 0x5a8a33;
+    scene.add(createMossClump(new THREE.Vector3(x, y, z), 0.4 + random() * 0.45, green));
   }
 
   // 5. 기포

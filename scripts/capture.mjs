@@ -31,6 +31,16 @@ const LAUNCH_ARGS = [
   '--hide-scrollbars',
 ];
 
+// 실제 GPU 경로(SwiftShader 강제 해제) — postFX(Bloom·코스틱·갓레이)가 실 GPU에서
+// 어떻게 나오는지 검증용 1장. 결정론은 보장 안 됨(GPU별 차이) → 검증 보조 산출물.
+const GPU_LAUNCH_ARGS = [
+  '--use-angle=metal',
+  '--ignore-gpu-blocklist',
+  '--enable-gpu',
+  '--no-sandbox',
+  '--hide-scrollbars',
+];
+
 function urlFor(base, params) {
   const qs = new URLSearchParams({ capture: '1', seed: String(SEED), ...params }).toString();
   return `${base.replace(/\/$/, '')}/?${qs}`;
@@ -82,8 +92,27 @@ async function main() {
     }
   } finally {
     await browser.close();
-    await new Promise((res) => server.httpServer.close(res));
   }
+
+  // --- 실제 GPU 스크린샷 1장 (front/day) — SwiftShader 강제 해제 경로 ---
+  try {
+    const gpuBrowser = await chromium.launch({ channel: 'chrome', args: GPU_LAUNCH_ARGS });
+    try {
+      const gpuCtx = await gpuBrowser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
+      const gpuPage = await gpuCtx.newPage();
+      await gpuPage.goto(urlFor(base, { camera: 'front', mode: 'day' }), { waitUntil: 'load' });
+      await gpuPage.waitForFunction(() => window.__captureReady === true, { timeout: 30000 });
+      await gpuPage.screenshot({ path: resolve(OUT_DIR, 'gpu_front_day.png') });
+      console.log('[capture] gpu_front_day.png');
+      await gpuCtx.close();
+    } finally {
+      await gpuBrowser.close();
+    }
+  } catch (err) {
+    console.warn(`[capture] gpu shot skipped: ${err?.message ?? err}`);
+  }
+
+  await new Promise((res) => server.httpServer.close(res));
 
   console.log(`[capture] done → ${OUT_DIR}`);
 }

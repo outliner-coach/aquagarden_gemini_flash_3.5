@@ -127,10 +127,12 @@ export class Fish {
       // 발광 네온 스트라이프
       const stripeGeo = new THREE.CylinderGeometry(0.1, 0.1, 1.8, 8);
       stripeGeo.rotateZ(Math.PI / 2);
+      // 글로우 '틴트'와 '원시 휘도'를 분리 — 채도/명도 낮춘 청록 소스 색이라
+      // Bloom이 가장자리 sheen만 잡고 실루엣 전체가 네온 디스크로 타버리지 않는다.
       const stripeMat = new THREE.MeshStandardMaterial({
-        color: 0x00ffff,
-        emissive: 0x00e5ff,
-        emissiveIntensity: 1.5,
+        color: 0x0a5560,
+        emissive: 0x12727d,
+        emissiveIntensity: 1.05, // 네온테트라 시그니처 글로우는 은은한 청록 sheen으로
         roughness: 0.2,
       });
       const stripe = new THREE.Mesh(stripeGeo, stripeMat);
@@ -207,15 +209,16 @@ export class Fish {
         center.add(other.position);
         n++;
         const d = this.position.distanceTo(other.position);
-        if (d > 0 && d < 2.0) {
+        // 더 넓은 분리 반경 + 강한 분리 → 균일 간격 일렬(에셜론) 회피, 느슨한 군집.
+        if (d > 0 && d < 3.2) {
           sep.add(new THREE.Vector3().subVectors(this.position, other.position).divideScalar(d));
         }
       }
       if (n > 0) {
         center.divideScalar(n);
         const cohesion = new THREE.Vector3().subVectors(center, this.position).normalize();
-        dir.addScaledVector(cohesion, 0.5);
-        dir.addScaledVector(sep, 0.35);
+        dir.addScaledVector(cohesion, 0.32);
+        dir.addScaledVector(sep, 0.55);
         dir.normalize();
       }
     }
@@ -251,7 +254,7 @@ export class Fish {
 export function spawnFauna(scene: THREE.Scene): Fish[] {
   const fishList: Fish[] = [];
 
-  fishList.push(new Fish(scene, 'betta', 0xd32f2f, [0.85, 0.85, 0.85], 1.4));
+  fishList.push(new Fish(scene, 'betta', 0xd32f2f, [0.68, 0.68, 0.68], 1.4));
 
   for (let i = 0; i < 6; i++) {
     fishList.push(new Fish(scene, 'tetra', 0x3a3a3a, [0.45, 0.45, 0.45], 3.8));

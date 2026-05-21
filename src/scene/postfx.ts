@@ -23,6 +23,8 @@ const GradeShader = {
     uFrame: { value: 0 },
     uVignette: { value: 0.32 },
     uGrain: { value: 0.022 },
+    uSaturation: { value: 1.27 }, // 무성한 녹색 채도↑ (sample.jpeg 정글감)
+    uWarm: { value: 0.085 }, // 따뜻한 톤 시프트 (차가운 청록 데모틸 제거)
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -36,10 +38,21 @@ const GradeShader = {
     uniform float uFrame;
     uniform float uVignette;
     uniform float uGrain;
+    uniform float uSaturation;
+    uniform float uWarm;
     varying vec2 vUv;
 
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
+
+      // 채도 — 녹색 위주로 살짝 끌어올려 무성함을 강조(luma 보존).
+      float luma = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+      c.rgb = mix(vec3(luma), c.rgb, uSaturation);
+
+      // 따뜻한 톤 시프트 — 적·녹을 살짝 올리고 청을 살짝 내려 데모틸의 차가움을 상쇄.
+      c.r += uWarm;
+      c.g += uWarm * 0.5;
+      c.b -= uWarm * 0.7;
 
       // 비네팅 — 가장자리를 부드럽게 어둡게.
       vec2 q = vUv - 0.5;
@@ -50,7 +63,7 @@ const GradeShader = {
       float n = fract(sin(dot(vUv * 1024.0 + uFrame, vec2(12.9898, 78.233))) * 43758.5453);
       c.rgb += (n - 0.5) * uGrain;
 
-      gl_FragColor = c;
+      gl_FragColor = clamp(c, 0.0, 1.0);
     }
   `,
 };
@@ -75,19 +88,21 @@ export function createPostFX(
 
   // 피사계심도(DoF) — 물속을 들여다보는 매크로 감성. "약하게"(maxblur 작게, 멀미 방지).
   // 초점은 어항 중심 부근, 배경/원경만 부드럽게 풀린다.
+  // 초점은 피사체(중경 바위·베타) 거리(≈21), 전경 수초·배경 유리만 부드럽게 풀린다.
   const bokeh = new BokehPass(scene, camera, {
-    focus: 16.0,
-    aperture: 0.0006,
-    maxblur: 0.006,
+    focus: 21.0,
+    aperture: 0.0016,
+    maxblur: 0.014,
   });
   composer.addPass(bokeh);
 
-  // 은은한 Bloom — strength 낮게, threshold 높게(밝은 하이라이트/발광/코스틱만 번지게).
+  // 은은한 Bloom — 발광(네온테트라 스트라이프)·코스틱·갓레이·하이라이트가 실제로 번지게.
+  // threshold를 낮춰 밝은 요소가 잡히되, strength는 절제해 화면 전체 blown-out은 피한다.
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(size.x, size.y),
     0.5, // strength
-    0.7, // radius
-    0.82, // threshold (이 밝기 이상만 bloom)
+    0.45, // radius (헤일로 반경 축소 → 발광 요소가 비대한 후광을 끌지 않게)
+    0.72, // threshold (코스틱 하이라이트·갓레이·은은한 발광만 잡힘)
   );
   composer.addPass(bloom);
 
