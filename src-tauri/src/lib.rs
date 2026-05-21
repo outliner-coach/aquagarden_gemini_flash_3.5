@@ -1,4 +1,5 @@
 mod tray;
+pub mod usage;
 mod window;
 
 // Aquagarden 데스크톱 셸 부트스트랩.
@@ -16,6 +17,10 @@ pub fn run() {
 
             // 프레임리스·무크롬 창의 1차 컨트롤 표면 (ADR-005).
             tray::create_tray(app.handle())?;
+
+            // 현재 세션 사용량을 주기적으로 읽어 프론트에 숫자로만 emit (ADR-002).
+            // FS 접근·파싱은 전부 Rust 안에서, 실패해도 어항은 멈추지 않는다 (ADR-009).
+            usage::start_usage_polling(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())
