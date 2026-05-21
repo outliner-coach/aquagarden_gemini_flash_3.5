@@ -8,6 +8,9 @@ import { createGodRays } from './scene/godrays';
 import { setupRenderer, createPostFX } from './scene/postfx';
 import { seedRng } from './lib/rng';
 import { cameraPresets, type CameraName } from './scene/cameraPresets';
+import { createUsageStore, startUsageSubscription } from './usage/store';
+import { mountHud } from './hud';
+import type { UsageSnapshot } from './types/usage';
 
 // 씬/카메라/렌더러/OrbitControls 초기화 + animate 루프 + 클릭 명언 배선.
 // 기존 index.html의 initScene·animate·triggerQuote 를 동작 보존으로 이식.
@@ -146,6 +149,16 @@ function applyCameraPreset(camera: THREE.PerspectiveCamera, name: CameraName): v
 const CAPTURE_FIXED_DELTA = 1 / 60;
 const CAPTURE_WARMUP_STEPS = 300;
 
+// 캡처 모드에서 HUD에 주입할 고정 스냅샷(결정론) — 라이트 게이트가 HUD 룩을 검토한다.
+// 실데이터(Tauri 이벤트)는 캡처 환경에 없으므로 대표값을 고정한다.
+const CAPTURE_SNAPSHOT: UsageSnapshot = {
+  context_tokens: 216_000,
+  context_limit: 1_000_000,
+  context_pct: 21.6,
+  cumulative_output_tokens: 48_500,
+  model: 'claude-opus-4-7',
+};
+
 function init(): void {
   const canvas = getEl<HTMLCanvasElement>('webgl-canvas');
   if (!canvas) return;
@@ -186,6 +199,12 @@ function init(): void {
     hideChrome();
     applyCameraPreset(camera, capture.camera);
     lighting.setMode(capture.mode);
+
+    // HUD는 #hud-overlay(별도 컨테이너)라 hideChrome 대상이 아니다 — 캡처에 함께 찍혀
+    // 라이트 게이트가 어항 위 HUD 룩을 검토할 수 있다. 고정 스냅샷으로 결정론 유지.
+    const captureStore = createUsageStore();
+    mountHud(captureStore);
+    captureStore.setSnapshot(CAPTURE_SNAPSHOT);
 
     if (capture.clip) {
       // 클립: 시드·프리셋 고정 상태에서 실시간 모션 재생(영상 녹화용).
@@ -230,6 +249,12 @@ function init(): void {
   const clickableObjects: THREE.Object3D[] = [...aquascape.clickable, ...fishList.map((f) => f.group)];
 
   setLightMode(lighting, 'day');
+
+  // 사용량 HUD — Rust(usage.rs)의 'usage://snapshot' 이벤트만 구독한다(FS 접근 없음).
+  // 구독 시작 실패(비-Tauri 환경)는 무시 — 어항은 멈추지 않는다.
+  const usageStore = createUsageStore();
+  mountHud(usageStore);
+  void startUsageSubscription(usageStore);
 
   // 조명 버튼 배선
   (['day', 'dusk', 'night'] as const).forEach((m) => {

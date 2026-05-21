@@ -3,7 +3,7 @@
 // (시스템 캐시 chromium, SwiftShader 소프트웨어 렌더)로 헤드리스 캡처한다.
 //
 // 사용: npm run build && npm run capture
-// 출력: phases/0-mvp/captures/step3/{camera}_{mode}.png, clip_front_day.webm
+// 출력: phases/0-mvp/captures/step6/{camera}_{mode}.png, clip_front_day.webm
 
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -13,7 +13,7 @@ import { chromium } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
-const OUT_DIR = resolve(root, 'phases/0-mvp/captures/step4');
+const OUT_DIR = resolve(root, 'phases/0-mvp/captures/step6');
 
 const SEED = 1337;
 const CAMERAS = ['front', 'driftwood', 'foreground'];
