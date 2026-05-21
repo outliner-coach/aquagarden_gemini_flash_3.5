@@ -4,9 +4,39 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildAquascape, animatePlants, animateBubbles, tankHeight } from './scene/aquascape';
 import { Lighting, colors, type LightMode } from './scene/lighting';
 import { spawnFauna } from './scene/fauna/fish';
+import { seedRng } from './lib/rng';
+import { cameraPresets, type CameraName } from './scene/cameraPresets';
 
 // 씬/카메라/렌더러/OrbitControls 초기화 + animate 루프 + 클릭 명언 배선.
 // 기존 index.html의 initScene·animate·triggerQuote 를 동작 보존으로 이식.
+
+// 캡처 스크립트(Playwright)가 결정론적 프레임 준비 완료를 감지하는 플래그.
+declare global {
+  interface Window {
+    __captureReady?: boolean;
+  }
+}
+
+// 캡처 모드 설정 — `?capture=1&seed=&camera=&mode=&clip=` URL 파라미터로 구동.
+// 일반 실행에는 영향 없음(파라미터 없으면 null).
+interface CaptureConfig {
+  seed: number;
+  camera: CameraName;
+  mode: LightMode;
+  clip: boolean;
+}
+
+function readCaptureConfig(): CaptureConfig | null {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('capture') !== '1') return null;
+  const seed = Number.parseInt(p.get('seed') ?? '1', 10);
+  return {
+    seed: Number.isFinite(seed) ? seed : 1,
+    camera: (p.get('camera') ?? 'front') as CameraName,
+    mode: (p.get('mode') ?? 'day') as LightMode,
+    clip: p.get('clip') === '1',
+  };
+}
 
 // --- 명언 데이터 (오브젝트 클릭 시 표시) ---
 interface Quote {
@@ -96,9 +126,32 @@ function setLightMode(lighting: Lighting, mode: LightMode): void {
   });
 }
 
+// 캡처 모드에서 chrome(로딩·HUD 오버레이)을 숨겨 순수한 씬만 캡처한다.
+function hideChrome(): void {
+  getEl('loading')?.remove();
+  const overlay = getEl('ui-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function applyCameraPreset(camera: THREE.PerspectiveCamera, name: CameraName): void {
+  const preset = cameraPresets[name] ?? cameraPresets.front;
+  camera.position.set(...preset.position);
+  camera.lookAt(new THREE.Vector3(...preset.target));
+  camera.updateProjectionMatrix();
+}
+
+// 캡처 결정론을 위한 고정 타임스텝 워밍업 — 동일 시드 + 동일 스텝 → 동일 프레임.
+const CAPTURE_FIXED_DELTA = 1 / 60;
+const CAPTURE_WARMUP_STEPS = 300;
+
 function init(): void {
   const canvas = getEl<HTMLCanvasElement>('webgl-canvas');
   if (!canvas) return;
+
+  const capture = readCaptureConfig();
+
+  // 캡처 모드는 씬 구성 전에 시드를 고정한다(난수 그리기 순서가 동일해야 결정론).
+  if (capture) seedRng(capture.seed);
 
   // Scene
   const scene = new THREE.Scene();
@@ -116,7 +169,50 @@ function init(): void {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setClearColor(colors.day.bg);
 
-  // Controls
+  // Lighting / scene contents
+  const lighting = new Lighting(scene, tankHeight);
+  const aquascape = buildAquascape(scene);
+  const fishList = spawnFauna(scene);
+
+  // --- 캡처 모드: 고정 카메라 프리셋 + 결정론적 프레임. 입력/컨트롤 없음. ---
+  if (capture) {
+    hideChrome();
+    applyCameraPreset(camera, capture.camera);
+    lighting.setMode(capture.mode);
+
+    if (capture.clip) {
+      // 클립: 시드·프리셋 고정 상태에서 실시간 모션 재생(영상 녹화용).
+      const clock = new THREE.Clock();
+      const renderClip = (): void => {
+        requestAnimationFrame(renderClip);
+        const delta = clock.getDelta();
+        const time = clock.getElapsedTime();
+        lighting.update(renderer, scene);
+        animatePlants(aquascape.animatedPlants, time);
+        animateBubbles(aquascape.bubbles, delta, time);
+        fishList.forEach((fish) => fish.update(delta, time));
+        renderer.render(scene, camera);
+      };
+      renderClip();
+      window.__captureReady = true;
+      return;
+    }
+
+    // 정지 프레임: 고정 타임스텝으로 워밍업(조명 lerp 정착 + 모션 진행)한 뒤 1회 렌더.
+    let t = 0;
+    for (let i = 0; i < CAPTURE_WARMUP_STEPS; i++) {
+      t += CAPTURE_FIXED_DELTA;
+      lighting.update(renderer, scene);
+      animatePlants(aquascape.animatedPlants, t);
+      animateBubbles(aquascape.bubbles, CAPTURE_FIXED_DELTA, t);
+      fishList.forEach((fish) => fish.update(CAPTURE_FIXED_DELTA, t));
+    }
+    renderer.render(scene, camera);
+    window.__captureReady = true;
+    return;
+  }
+
+  // --- 일반 실행: OrbitControls + 클릭 명언 + rAF 루프 ---
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
@@ -124,10 +220,6 @@ function init(): void {
   controls.minDistance = 6;
   controls.maxDistance = 28;
 
-  // Lighting / scene contents
-  const lighting = new Lighting(scene, tankHeight);
-  const aquascape = buildAquascape(scene);
-  const fishList = spawnFauna(scene);
   const clickableObjects: THREE.Object3D[] = [...aquascape.clickable, ...fishList.map((f) => f.group)];
 
   setLightMode(lighting, 'day');

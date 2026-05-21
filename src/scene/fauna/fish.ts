@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { tankWidth, tankHeight, tankDepth } from '../aquascape';
+import { random } from '../../lib/rng';
 
 // 베타·네온테트라·코리도라스. 기존 index.html의 Fish 클래스·spawnFauna 를 동작 보존 이식.
 // 공통 인터페이스: group + update(delta, time) (ARCHITECTURE 생물 패턴).
@@ -38,9 +39,9 @@ export class Fish {
     this.scale = scale;
 
     this.position = new THREE.Vector3(
-      (Math.random() - 0.5) * (tankWidth - 4),
-      (Math.random() - 0.5) * (tankHeight - 6),
-      (Math.random() - 0.5) * (tankDepth - 4),
+      (random() - 0.5) * (tankWidth - 4),
+      (random() - 0.5) * (tankHeight - 6),
+      (random() - 0.5) * (tankDepth - 4),
     );
     if (type === 'corydoras') {
       this.position.y = -tankHeight / 2 + 1.2;
@@ -168,14 +169,14 @@ export class Fish {
     const boundsZ = tankDepth / 2 - 2.5;
 
     this.target.set(
-      (Math.random() - 0.5) * boundsX * 2,
+      (random() - 0.5) * boundsX * 2,
       this.type === 'corydoras'
-        ? -tankHeight / 2 + 1.2 + Math.random() * 1.5
-        : (Math.random() - 0.5) * boundsY * 2,
-      (Math.random() - 0.5) * boundsZ * 2,
+        ? -tankHeight / 2 + 1.2 + random() * 1.5
+        : (random() - 0.5) * boundsY * 2,
+      (random() - 0.5) * boundsZ * 2,
     );
 
-    this.currentSpeed = this.baseSpeed * (0.8 + Math.random() * 0.5);
+    this.currentSpeed = this.baseSpeed * (0.8 + random() * 0.5);
   }
 
   update(delta: number, time: number): void {

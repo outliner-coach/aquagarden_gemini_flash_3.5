@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "visual-harness",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-21T18:00:41+0900",
+      "completed_at": "2026-05-21T18:10:00+0900",
+      "summary": "결정론적 캡처 인프라(시각 변경 0). src/lib/rng.ts: 시드 가능한 mulberry32 PRNG(random/seedRng), 기본 Date.now() 시드라 일반 실행은 기존 랜덤 동작 보존 — aquascape.ts·fish.ts의 Math.random 전부 random()으로 치환(난수 그리기 순서 고정→결정론). rng.test.ts 4케이스(동일시드 동일시퀀스·다른시드 차이·[0,1)범위·시드0). src/scene/cameraPresets.ts: front/driftwood/foreground 3프리셋(position+target). main.ts에 캡처 모드 추가 — ?capture=1&seed=&camera=&mode=&clip= URL파라미터로 구동: 씬 빌드 전 seedRng→고정카메라(OrbitControls 미생성)→hideChrome(loading제거+ui-overlay 숨김, index.html에 id 추가)→정지프레임은 고정 Δ(1/60)×300스텝 워밍업(조명 lerp 정착+모션진행) 후 1회 렌더+window.__captureReady=true(rAF·입력 없음), clip은 실시간 rAF. 일반 실행 경로는 기존 그대로. scripts/capture.mjs(npm run capture): vite preview(dist, 4317)+playwright(시스템 Chrome channel, SwiftShader 강제로 run-to-run 결정론) 헤드리스로 1280x800, 카메라3×모드3=9장 {camera}_{mode}.png + clip_front_day.webm(best-effort) → phases/0-mvp/captures/step3/. AC: build OK, 9장 생성, 2회 실행 PNG SHA-256 전부 byte-identical(결정론 확인). 캡처는 .gitignore(phases/**/captures/)로 미커밋. playwright@1.60 devDep 추가(브라우저는 시스템 캐시/Chrome 사용, 다운로드 없음). tsc/lint/test 통과. 미학 변경 없음(step4 polish 측정도구만)."
     },
     {
       "step": 4,

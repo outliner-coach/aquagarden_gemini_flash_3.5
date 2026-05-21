@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { random } from '../lib/rng';
 
 // 유리/모래/소일/수면/바위/유목/오리/수초/기포. 기존 index.html의 buildAquascape·
 // createProceduralRock·getSubstrateHeight·createSwayingPlant·spawnBubbles·animateBubbles 를
@@ -45,9 +46,9 @@ function createProceduralRock(
     const vy = position.getY(i);
     const vz = position.getZ(i);
     const d = 0.25;
-    position.setX(i, vx + (Math.random() - 0.5) * d);
-    position.setY(i, vy + (Math.random() - 0.5) * d);
-    position.setZ(i, vz + (Math.random() - 0.5) * d);
+    position.setX(i, vx + (random() - 0.5) * d);
+    position.setY(i, vy + (random() - 0.5) * d);
+    position.setZ(i, vz + (random() - 0.5) * d);
   }
   rockGeo.computeVertexNormals();
 
@@ -106,9 +107,9 @@ function createSwayingPlant(
     // 실루엣을 위한 작은 잎
     for (let l = 0; l < 3; l++) {
       const leafGeo = new THREE.ConeGeometry(rad * 2.2, segHeight * 0.9, 3);
-      leafGeo.rotateX(Math.PI / 4 + Math.random() * 0.4);
+      leafGeo.rotateX(Math.PI / 4 + random() * 0.4);
       const leafMesh = new THREE.Mesh(leafGeo, plantMat);
-      leafMesh.position.set(0, segHeight * 0.4 + Math.random() * 0.3, 0);
+      leafMesh.position.set(0, segHeight * 0.4 + random() * 0.3, 0);
       leafMesh.rotation.y = (l * Math.PI * 2) / 3;
       segmentMesh.add(leafMesh);
     }
@@ -124,9 +125,9 @@ function createSwayingPlant(
 
   animatedPlants.push({
     nodes: segmentList,
-    speed: 1.2 + Math.random() * 1.0,
-    amplitude: 0.05 + Math.random() * 0.06,
-    offset: Math.random() * Math.PI * 2,
+    speed: 1.2 + random() * 1.0,
+    amplitude: 0.05 + random() * 0.06,
+    offset: random() * Math.PI * 2,
   });
 }
 
@@ -134,20 +135,20 @@ const BUBBLE_SPOUT_X = 0;
 const BUBBLE_SPOUT_Z = -1;
 
 function resetBubble(b: THREE.Mesh, randomStart = false): void {
-  b.position.x = BUBBLE_SPOUT_X + (Math.random() - 0.5) * 0.8;
+  b.position.x = BUBBLE_SPOUT_X + (random() - 0.5) * 0.8;
   b.position.y = randomStart
-    ? -tankHeight / 2 + 1 + Math.random() * (tankHeight - 2)
+    ? -tankHeight / 2 + 1 + random() * (tankHeight - 2)
     : -tankHeight / 2 + 1;
-  b.position.z = BUBBLE_SPOUT_Z + (Math.random() - 0.5) * 0.8;
+  b.position.z = BUBBLE_SPOUT_Z + (random() - 0.5) * 0.8;
 
-  const baseScale = 0.4 + Math.random() * 1.5;
+  const baseScale = 0.4 + random() * 1.5;
   b.scale.set(baseScale, baseScale, baseScale);
 
   b.userData = {
-    speedY: 2.0 + Math.random() * 2.5,
-    driftSpeed: 3.0 + Math.random() * 2.0,
-    driftRadius: 0.05 + Math.random() * 0.15,
-    phase: Math.random() * Math.PI * 2,
+    speedY: 2.0 + random() * 2.5,
+    driftSpeed: 3.0 + random() * 2.0,
+    driftRadius: 0.05 + random() * 0.15,
+    phase: random() * Math.PI * 2,
   };
 }
 
@@ -332,24 +333,24 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
 
   // 4. 수초 — 좌측 녹색 이끼/풀, 우측 적색 줄기수초
   for (let i = 0; i < 40; i++) {
-    const x = -10 + Math.random() * 4.5;
-    const z = -4 + Math.random() * 6;
+    const x = -10 + random() * 4.5;
+    const z = -4 + random() * 6;
     const y = getSubstrateHeight(x, z) + 0.2;
-    const height = 0.8 + Math.random() * 1.5;
+    const height = 0.8 + random() * 1.5;
     createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x4caf50, 0.06);
   }
   for (let i = 0; i < 25; i++) {
-    const x = -3 + Math.random() * 7;
-    const z = -2 + Math.random() * 4;
+    const x = -3 + random() * 7;
+    const z = -2 + random() * 4;
     const y = getSubstrateHeight(x, z) + 0.1;
-    const height = 1.0 + Math.random() * 1.8;
+    const height = 1.0 + random() * 1.8;
     createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x81c784, 0.05);
   }
   for (let i = 0; i < 45; i++) {
-    const x = 7 + Math.random() * 4.5;
-    const z = -3.5 + Math.random() * 6.5;
+    const x = 7 + random() * 4.5;
+    const z = -3.5 + random() * 6.5;
     const y = getSubstrateHeight(x, z) + 0.2;
-    const height = 1.8 + Math.random() * 3.5;
+    const height = 1.8 + random() * 3.5;
     createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0xd81b60, 0.08);
   }
 
