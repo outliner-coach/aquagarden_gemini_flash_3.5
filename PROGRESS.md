@@ -1,5 +1,76 @@
 # PROGRESS — Aquagarden
 
+## 2026-05-22 — 물멍 최적화: calm motion + clear teal visual handoff
+
+> 사용자의 피드백: 이 앱의 핵심 목적은 업무 중 물멍(감상)인데, 물고기 움직임이 빠르고 부자연스러우며 현재 버전이 최초 배포본보다 어둡고 또렷하지 않다. `gemini_plan.md`를 참고하되, 단순히 밝히는 대신 "느린 유영 + 맑은 청록 + 대비/선명도 유지" 방향으로 구현. 브랜치 `codex/calm-clarity`, 커밋 `e1f397b`, 원격 `origin/codex/calm-clarity`까지 push 완료.
+
+### 한 일
+
+- **모션 프로파일 도입** (`src/scene/fauna/fish.ts`): `fishMotionProfiles`와 `turnSlowdownForDot()` 추가. 베타/테트라/코리도라스 속도를 각각 `0.8 / 2.0 / 1.2`로 낮추고, 종별 `steeringLerp`, `turnLerp`, `tailFreq`, `tailAmp`로 느리고 관성 있는 유영을 구현.
+- **급회전/군영 떨림 완화** (`src/scene/fauna/fish.ts`): 목표 방향이 크게 바뀌면 `turnSlowdown`으로 최대 32% 감속. 테트라 군영 보정은 `flockSteer.lerp(rawFlockSteer, 0.06)`로 완충. 꼬리 흔들림 주파수는 실제 속도/기본 속도 비율에 연동.
+- **저서 생물 감속** (`src/scene/fauna/inverts.ts`): 새우 속도를 `0.25 + random() * 0.18`로 낮추고 회전을 즉시 각도 변경 대신 lerp로 완충.
+- **맑은 청록 day 조명 복원** (`src/scene/lighting.ts`): day 팔레트 `ambient 0xd8eaff`, `topLight 0xf8ffff`, `fog 0x173940`, `bg 0x07181d`. 조명값은 `targetLightSettingsForMode()`로 분리해 테스트 가능하게 함. dusk/night는 선명도만 완만하게 보정.
+- **포스트FX 선명도 개선** (`src/scene/postfx.ts`): `gradeDefaults`, `bloomDefaults`, `toneMappingExposure` export. 비네팅 `0.15`, 그레인 `0.006`, 채도 `1.12`, Bloom `0.42/0.38/1.05`, exposure `1.08`.
+- **식재/네온 가독성 보정** (`src/scene/aquascape.ts`, `src/scene/fauna/fish.ts`): 중경 수초와 모스를 형광 라임으로 되돌리지 않는 범위에서 약간 밝힘. 네온테트라 stripe는 맑은 day 모드에서도 묻히지 않도록 `0x0c7580 / 0x1aa6b0 / 1.15`.
+- **사용량 무드 완화** (`src/scene/mood.ts`): high usage 상태에서도 감상성을 해치지 않도록 60/80/95% 임계값을 `1.08/0.94`, `1.18/0.86`, `1.32/0.76`으로 완화.
+- **회귀 테스트 추가**: `src/scene/fauna/fish.test.ts`, `src/scene/lighting.test.ts`, `src/scene/postfx.test.ts` 추가 및 `src/scene/mood.test.ts` 갱신.
+- **계획 문서 동기화** (`gemini_plan.md`): 실제 구현값과 검증 절차를 반영해 갱신.
+
+### 검증
+
+- `npm run test` ✅ 10 files / 51 tests pass.
+- `npm run lint` ✅ pass.
+- `npm run build` ✅ pass. Vite chunk-size warning은 기존 성격의 번들 크기 경고.
+- `cd src-tauri && source "$HOME/.cargo/env" && cargo test` ✅ Rust tests pass.
+- `CAPTURE_PHASE=3-calm-clarity CAPTURE_STEP=motion-clarity npm run capture` ✅ 캡처 산출:
+  - `phases/3-calm-clarity/captures/motion-clarity/front_day.png`
+  - `phases/3-calm-clarity/captures/motion-clarity/gpu_front_day.png`
+  - `phases/3-calm-clarity/captures/motion-clarity/clip_front_day.webm`
+- `npm run dev`로 Tauri 앱 구동 확인. 첫 시도는 오래 남아 있던 `vite` PID가 1420 포트를 점유해 실패했고, 해당 프로세스를 종료한 뒤 정상 실행.
+
+### 이어할 것
+
+- **사용자 시각 사인오프**: `phases/3-calm-clarity/captures/motion-clarity/` 캡처와 실제 앱을 보고 day 모드가 "맑고 또렷하지만 납작한 민트색으로 뜨지 않는지" 확인 필요. 특히 60초 물멍 체감은 사용자의 눈으로 최종 판단.
+- **PR 생성 여부 결정**: 브랜치 `codex/calm-clarity`는 push 완료. GitHub PR 링크는 `https://github.com/outliner-coach/aquagarden_gemini_flash_3.5/pull/new/codex/calm-clarity`.
+- **고 사용량 무드 캡처 fast-follow**: 현재 capture fixture는 context `21.6%`라 high usage 상태의 포그/속도 완화는 단위 테스트로만 검증됨. 필요하면 capture용 snapshot pct를 80/95%로 바꾸는 별도 캡처 모드나 임시 스크립트로 확인.
+- **`PROGRESS.md` 상태 주의**: 이 파일에는 이전 세션에서 이미 추가돼 있던 미커밋 로그가 있었다. 이번 핸드오프 문서화에서는 상단에 새 로그를 추가했고, 다음 커밋에는 기존 로그와 함께 들어갈 수 있다.
+
+### 배운 것
+
+- 최초 버전의 또렷함은 "무조건 밝기"보다 **어두운 청록 물 + 밝은 바닥 코스틱 + 붉은/분홍 포인트의 분리감**에서 온다.
+- 물고기 속도만 낮추면 꼬리만 바쁘게 보일 수 있으므로, 꼬리 주파수도 실제 속도에 연동해야 물멍 템포가 살아난다.
+- `npm run dev` 포트 충돌 시 이 프로젝트는 `vite.config.ts`의 `strictPort: true` 때문에 포트 변경보다 기존 `vite` 프로세스 정리가 빠르다.
+
+## 2026-05-22 — IDEATION 전 항목 마무리 (harness 미학 phase + Codex 리뷰 루프)
+
+> v1 MVP를 main 병합하고, IDEATION의 모든 개선 항목을 구현. 매 작업마다 Codex(이미지/코드) 리뷰로 개선점이 없을 때까지 반복(goal 모드). 3개 phase 브랜치를 순차 main 병합. 현재 `main`, 트리 클린, 빌드/테스트 그린.
+
+### 한 일
+
+- **v1 MVP → main 병합** (`feat-0-mvp` → `33e7761`): code-reviewer GO(CRITICAL 6/6 통과). 병합 전 휠줌·따라다니는 대사·delta클램프(`766c4cc`)와 IDEATION 보강을 먼저 커밋.
+- **harness `1-aesthetic` phase 실행** (`scripts/execute.py 1-aesthetic`, `5db6f7b` 병합): step0 `aesthetic-rubric`(AESTHETIC.md 감산 루브릭 정렬 + 캡처 스크립트 `CAPTURE_PHASE`/`CAPTURE_STEP` 파라미터화) → step1 `subtraction-pass`(조명·포그·ambient·Bloom / 녹색채도↓·빨간벽 분산·전경밀도↓ / 카메라 `HERO_W` 20→22). 이중 게이트(designer Pass + Codex 조건부GO + 사용자 사인오프) 통과.
+- **IDEATION 전 항목 구현** (`feat-2-polish` → `a621d0d` 병합, 8 커밋). 각 작업 후 Codex 리뷰로 수렴까지 반복:
+  - 시각 2·3차 정제 + 베타 0.68→0.78·코리 0.65→0.70 (`0944c0c`, Codex 조건부GO→GO 수렴)
+  - **§7 렌더 완전 정지**(`a763818`): `frame()`+`start/stopRenderLoop()`, `document.hidden`||`collapsed` 시 `cancelAnimationFrame`, 재개 시 `simTime` 직접 누적(getElapsedTime 점프 방지 — Codex 지적).
+  - **§4-1/4-5/4-6**(`955547f`): 더블클릭 줌리셋, 투과 시 ⋯ 에메랄드 글로우(`menu-passthrough-on`), 퍽 5px 드래그 이동. Codex: `event.detail>1` 가드·`pointercancel` 정리.
+  - **§4-2/§6-3**(`5941d3f`): 대사 종별 5줄·8s, HUD `level`(normal/warn/critical) 바색상+`hud-alert` 강조. jsdom DOM 렌더 테스트 추가.
+  - **§4-4 멀티모니터 가드**(`580a155`, Rust): `window.rs` 위치 영속화(`settings.json` `window-position`, 400ms 스로틀+`flush`) + 시작 시 OOB면 주모니터 안전영역 회수. `lib.rs` `on_window_event`.
+  - **§6-1 모델 한도**(`2762540`, Rust): `context_limit()` 확장 + `is_model()` 정확 매칭. **Codex가 버그 포착 — Sonnet 4.6은 200K 아니라 1M(공식)**, 200K면 5배 과대표시(ADR-009 위반)였음. opus-4-7·sonnet-4-6=1M, haiku-4-5=200K, 그 외 None.
+  - **§6-2 어항↔사용량 연동**(`c92ff54`): `src/scene/mood.ts` `usageMood(pct)` 순수함수(점유율↑→`fogDensityMul`↑·`fishSpeedMul`↓), `lighting.fogDensityMul`·`fish.update(speedMul)`로 적용. 라이브 루프만(캡처는 CALM).
+  - **§5 새우·달팽이**(`4687b5e`): `src/scene/fauna/inverts.ts` `Shrimp`/`Snail` 공통 `Critter` 인터페이스, `spawnInverts`. Codex 비주얼 2라운드 → 달팽이 나선 띠·새우 더듬이 보강 → 수렴.
+- **Codex CLI 복구**: 벤더 바이너리 누락(ENOENT) → `npm install -g @openai/codex`(0.133.0). 이미지 리뷰는 `codex exec -i` + 프롬프트는 **stdin**으로(가변 `-i`가 positional 프롬프트를 삼킴).
+
+### 이어할 것
+
+- **§6-1 롤링 5h 사용한도 근사** — 의도적 보류. 재개 조건: 정밀 5h 한도(분모) 소스를 찾거나 "추정 budget" UX 확정. 분모 없는 원시 카운트는 저가치 + 날짜 파싱(chrono) 의존. 근거는 `docs/IDEATION.md` §6-1, memory `aquagarden-usage-source`.
+- **병합된 phase 브랜치 정리**(선택): `feat-0-mvp`·`feat-1-aesthetic`·`feat-2-polish` 삭제 가능(전부 main 병합됨).
+- **§6-2 시각 체감 튜닝**(선택): 고 점유율 상태는 캡처가 고정 21.6%라 미검증 — 캡처에 고% 변형을 주입하면 임박/한계 어항 룩을 비주얼 게이트로 확인 가능. Codex 제안: 속도 저하 시 꼬리 흔들림 주파수도 동반 저하.
+
+### 배운 것
+
+- **Codex 이미지 리뷰**: `omc ask`는 텍스트 전용(이미지 불가). 시각 리뷰는 `printf '%s' "프롬프트" | codex exec --dangerously-bypass-approvals-and-sandbox -i a.png -i b.png` — `-i`가 가변인자라 프롬프트는 반드시 stdin. (memory `reference-codex-image-review`)
+- **모델 컨텍스트 한도**: opus-4-7·sonnet-4-6=1M, haiku-4-5=200K. 미검증 모델에 추정 한도 박지 말 것(ADR-009) — 1M 모델에 200K면 5배 과대.
+
 ## 2026-05-22 — 버그 픽스 2건 + 휠 줌 + 대사 말풍선 + 미학 아이데이션
 
 > 실사용 피드백 2건 해결: 물고기 사라짐(rAF delta 클램프), 대사 안 보임(물고기 머리 위 말풍선). 휠 줌 신규 추가. 원본 vs 현재 미학 비교로 회귀 원인 진단 후 IDEATION.md 작성. **전부 미커밋** (브랜치 `feat-0-mvp`).
