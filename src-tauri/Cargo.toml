@@ -15,6 +15,8 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["macos-private-api", "tray-icon", "image-png"] }
+# start_resize_dragging 의 ResizeDirection 타입(tauri 가 재export 안 함) 사용을 위해 직접 의존.
+tauri-runtime = "2"
 tauri-plugin-store = "2"
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }

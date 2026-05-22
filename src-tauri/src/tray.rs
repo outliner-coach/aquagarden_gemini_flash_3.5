@@ -1,8 +1,10 @@
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager,
+    AppHandle,
 };
+
+use crate::window::toggle_main_window;
 
 /// 트레이/메뉴바 아이콘을 1차 컨트롤 표면으로 구성한다 (ADR-005).
 /// 메뉴: 표시/숨김 · 설정(placeholder) · 종료.
@@ -40,15 +42,4 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
 
     builder.build(app)?;
     Ok(())
-}
-
-fn toggle_main_window(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        if window.is_visible().unwrap_or(true) {
-            let _ = window.hide();
-        } else {
-            let _ = window.show();
-            let _ = window.set_focus();
-        }
-    }
 }

@@ -27,3 +27,79 @@ body {
 .quote-font {
   font-family: 'Noto Sans KR', 'Playfair Display', serif;
 }
+
+/*
+ * 호버 드러남 chrome — 평소엔 어항만 남기고(Zen) 마우스를 올리면 부드럽게 나타난다.
+ * UI_GUIDE: 모드 진입·이탈 외에 어떤 chrome도 깜빡이지 않게(점멸 금지) → opacity 트윈만.
+ */
+.chrome {
+  transition: opacity 0.35s ease;
+}
+.chrome-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 캔버스 투명도 전환 — 슬라이더 조정 시 부드럽게. */
+#webgl-canvas {
+  transition: opacity 0.2s ease;
+}
+
+/*
+ * HUD 흐릿↔또렷 — 평소엔 곁눈질 가능한 수준으로 가라앉히고(감상 방해 최소화),
+ * 어항에 마우스를 올리면(컨트롤 드러남과 동기) 또렷해진다. opacity 트윈만(점멸 금지).
+ */
+#hud-overlay {
+  transition: opacity 0.45s ease;
+}
+.hud-faint {
+  opacity: 0.32;
+}
+.hud-bright {
+  opacity: 1;
+}
+
+/* 물고기 대사 — 씬 위에 얹는 작고 사색적인 한마디. 패널 없이 텍스트만(은은한 그림자로 가독). */
+.fish-line-text {
+  color: rgba(241, 245, 249, 0.92);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+
+/*
+ * 리사이즈 그립 — 프레임리스 창의 가장자리/모서리 드래그 리사이즈 트리거. 투명하지만
+ * pointer-events 를 받아 네이티브 리사이즈를 시작한다. 두께는 충분히 잡히게.
+ */
+.resize-grip {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 25;
+}
+.resize-n { top: 0; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.resize-s { bottom: 0; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.resize-e { top: 8px; bottom: 8px; right: 0; width: 6px; cursor: ew-resize; }
+.resize-w { top: 8px; bottom: 8px; left: 0; width: 6px; cursor: ew-resize; }
+.resize-ne { top: 0; right: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+.resize-nw { top: 0; left: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+.resize-se { bottom: 0; right: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+.resize-sw { bottom: 0; left: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+
+/* 어항 본문 위 좌클릭 드래그 = 창 이동. 캔버스 영역에 grab 커서 힌트. */
+#webgl-canvas {
+  cursor: grab;
+}
+
+/* 접힘(잠깐 숨기기) 상태 — ⋯ 퍽만 남기고 어항·HUD·컨트롤·그립을 모두 감춘다. */
+#puck {
+  display: none;
+}
+body.collapsed #webgl-canvas,
+body.collapsed #hud-overlay,
+body.collapsed #controls,
+body.collapsed #menu-popover,
+body.collapsed #fish-line,
+body.collapsed .resize-grip {
+  display: none;
+}
+body.collapsed #puck {
+  display: flex;
+}

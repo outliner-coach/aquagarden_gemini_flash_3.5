@@ -57,6 +57,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-global-shortcut",
  "tauri-plugin-store",
+ "tauri-runtime",
 ]
 
 [[package]]
