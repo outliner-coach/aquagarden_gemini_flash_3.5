@@ -4,9 +4,10 @@
 
 - Branch: `codex/calm-clarity`
 - Latest pushed implementation commit: `e1f397b feat(scene): tune calm motion and clarity`
+- Latest pushed documentation commit: `d44c95b docs: add calm clarity handoff`
 - Remote branch: `origin/codex/calm-clarity`
 - PR URL to open: `https://github.com/outliner-coach/aquagarden_gemini_flash_3.5/pull/new/codex/calm-clarity`
-- Important local doc state: `PROGRESS.md` has handoff documentation changes that should be committed if the next agent wants the documentation on the remote branch.
+- Worktree should be clean after pulling this branch.
 
 ## What Changed
 
@@ -46,13 +47,9 @@
 
 ## Recommended Next Steps
 
-1. Commit and push this handoff documentation if desired:
-   - `git add PROGRESS.md PLAN.md`
-   - `git commit -m "docs: add calm clarity handoff"`
-   - `git push`
-2. Ask the user for visual signoff on the current app and capture artifacts.
-3. Open a PR from `codex/calm-clarity` to `main`.
-4. If the user says high-usage mode still feels too disruptive, add a capture path or fixture for 80/95% context pct before tuning further.
+1. Ask the user for visual signoff on the current app and capture artifacts.
+2. Open a PR from `codex/calm-clarity` to `main`.
+3. If the user says high-usage mode still feels too disruptive, add a capture path or fixture for 80/95% context pct before tuning further.
 
 ## Useful Commands
 
