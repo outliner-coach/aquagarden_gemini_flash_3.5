@@ -171,12 +171,12 @@ ACESFilmic + Bloom은 이 캐스트를 증폭시켜 결과적으로 "탁한 연�
 ### 6-1. 한도 데이터 소스 & 모델별 컨텍스트 한도 매핑 (스파이크 완료)
 - **배경**: 현재 `usage.rs`는 `claude-opus-4-7` 모델(1,000,000 토큰)만 인식하고 나머지는 `None`으로 처리. 실제 환경에선 Sonnet·Haiku 빈도도 높아 컨텍스트% 표시를 위해 매핑 확장이 필요.
 - **한도 데이터 소스 — 조사 결론(2026-05-22 스파이크)**: 정밀 한도(5h%·주간%·모델군%·리셋)를 **프로젝트 제약 안에서 읽을 수 있는 로컬 소스는 없다.** 근거: ① `~/.claude/**`(허용된 유일 읽기 범위)에 정밀 한도 파일 없음(`buddy-tokens.json`=일일 합계만, `sessions/*.json`=타임스탬프만), ② 정밀 데이터가 추정되는 `~/Library/Application Support/Claude/IndexedDB/…leveldb`는 Claude Desktop(claude.ai 래퍼) 앱 저장소이자 capability 범위 밖, ③ API(`/api/usage`) 경로는 CLAUDE.md CRITICAL "완전 로컬·무네트워크·`connect-src 'none'`"가 금지. → **한도 표시는 롤링 5h 근사가 유일 경로**(폴백이 아님). 정밀 캐시를 찾는 파일 워처 분기는 두지 않는다.
-- **모델별 컨텍스트 한도 매핑** (현세대 4.x 기준 — 실제 매핑은 로그에 찍힌 model id로 검증):
-  - `claude-opus-4-7*`: **1,000,000** (현재 구현됨)
-  - `claude-sonnet-4-*` 계열: **200,000** (1M 베타 옵션 존재 — 정밀값은 로그/실측 확인)
-  - `claude-haiku-4-*` 계열: **200,000**
-  - 미지·구세대 모델: `None`으로 graceful degrade(HUD "데이터 없음"). 알 수 없는 모델에 추정 한도를 박지 마라. 이유: 틀린 분모로 잘못된 %를 보이느니 빈 상태가 정직하다(ADR-009).
-- **롤링 5h 사용한도 근사**: `~/.claude/projects/**/*.jsonl` 트랜스크립트의 토큰 사용량을 5시간 슬라이딩 윈도우로 합산해 자체 역산. v1 컨텍스트% 파싱 인프라(`usage.rs`) 재사용. HUD엔 "추정치(Estimated)"임을 표시. 파싱은 graceful degrade(CRITICAL 6). 관련: memory `aquagarden-usage-source`.
+- **모델별 컨텍스트 한도 매핑** ✅ 구현됨 — 공식 컨텍스트 윈도우(Anthropic docs, Codex 대조):
+  - `claude-opus-4-7`: **1,000,000** (CC 실측 확인)
+  - `claude-sonnet-4-6`: **1,000,000** (※ 처음 200K로 오기재했다가 Codex 리뷰로 정정 — 200K면 5배 과대표시)
+  - `claude-haiku-4-5`: **200,000**
+  - 그 외(미지·구세대·미검증 미래 변형): `None`으로 graceful degrade(HUD "데이터 없음"). 추정 한도를 박지 마라 — 틀린 분모보다 빈 상태가 정직(ADR-009). `is_model()`로 family 정확 매칭(코어스 prefix 오매칭 방지).
+- **롤링 5h 사용한도 근사** — ⏸ **보류(의도적)**. 이유: 스파이크상 정밀 5h **한도(분모)가 없어** 롤링은 분모 없는 원시 토큰 카운트가 되어 가치가 낮고, 타임스탬프 윈도잉에 날짜 파싱(chrono 의존)이 필요하다. 분모 소스를 찾거나 "추정 budget" UX가 정해지면 재개. 관련: memory `aquagarden-usage-source`.
 
 ### 6-2. 어항 ↔ 사용량 시각 연동 아이디어
 | 상태 | 어항 반응 |

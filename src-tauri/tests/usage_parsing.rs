@@ -45,13 +45,14 @@ fn missing_fields_degrade_to_zero_and_skip_usage_less_lines() {
 }
 
 #[test]
-fn unknown_model_omits_limit_and_pct() {
+fn legacy_or_unknown_model_omits_limit_and_pct() {
+    // 구세대(3.x)·미지 모델은 한도 미상 → 토큰은 표시하되 %/게이지는 생략(ADR-009).
     let snap = parse_session_file(&fixture("unknown_model.jsonl")).expect("has usage");
     assert_eq!(snap.context_tokens, 100);
     assert_eq!(snap.context_limit, None);
     assert_eq!(snap.context_pct, None); // 0 나눗셈/근거 없는 % 생략.
     assert_eq!(snap.cumulative_output_tokens, 20);
-    assert_eq!(snap.model.as_deref(), Some("claude-haiku-4-5-20251001"));
+    assert_eq!(snap.model.as_deref(), Some("claude-sonnet-3-5-20241022"));
 }
 
 #[test]
@@ -65,10 +66,17 @@ fn missing_file_yields_no_snapshot_without_panic() {
 }
 
 #[test]
-fn context_limit_maps_opus_family_only() {
+fn context_limit_maps_known_families() {
+    // §6-1 공식 컨텍스트 윈도우. opus-4-7=1M, sonnet-4-6=1M, haiku-4-5=200K.
+    // CC 로그는 "[1m]" 접미사·날짜 접미사 변형을 쓴다 (step0 산출).
     assert_eq!(context_limit("claude-opus-4-7"), Some(1_000_000));
-    // CC 로그는 "[1m]" 접미사 변형을 쓰기도 한다 (step0 산출).
     assert_eq!(context_limit("claude-opus-4-7[1m]"), Some(1_000_000));
-    assert_eq!(context_limit("claude-haiku-4-5-20251001"), None);
+    assert_eq!(context_limit("claude-sonnet-4-6"), Some(1_000_000));
+    assert_eq!(context_limit("claude-haiku-4-5-20251001"), Some(200_000));
+    // 구세대·미검증 미래 변형은 None — 틀린 분모 회피(ADR-009).
+    assert_eq!(context_limit("claude-sonnet-3-5-20241022"), None);
+    assert_eq!(context_limit("claude-sonnet-4-9-future"), None);
+    assert_eq!(context_limit("claude-opus-3"), None);
+    assert_eq!(context_limit("claude-opus-4-70"), None); // 코어스 prefix 오매칭 방지
     assert_eq!(context_limit(""), None);
 }
