@@ -6,6 +6,7 @@ mod window;
 // 창 설정(투명·always-on-top·프레임리스)은 tauri.conf.json 단일 소스에 있고,
 // 여기서는 macOS Dock 숨김·트레이·클릭통과 command만 배선한다.
 pub fn run() {
+    use tauri::Manager;
     use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
     tauri::Builder::default()
@@ -52,6 +53,24 @@ pub fn run() {
 
             // 투과모드 호버홀 워처 — ⋯ 영역만 클릭 가능하게 전역 커서를 폴링한다.
             window::spawn_passthrough_watcher(app.handle().clone());
+
+            // 창 위치 복원 + 이동 시 영속화(§4-4). 저장 위치가 모든 모니터 밖이면(모니터 분리)
+            // 주 모니터 안전 영역으로 회수해 위젯이 화면 밖으로 사라지지 않게 한다.
+            window::restore_window_position(app.handle());
+            if let Some(main) = app.get_webview_window("main") {
+                let pos_app = app.handle().clone();
+                main.on_window_event(move |event| match event {
+                    tauri::WindowEvent::Moved(pos) => {
+                        window::persist_window_position(&pos_app, pos.x, pos.y);
+                    }
+                    // 드래그 종료 후 흔한 포커스 상실·종료 요청 시 마지막 좌표를 확실히 저장.
+                    tauri::WindowEvent::Focused(false)
+                    | tauri::WindowEvent::CloseRequested { .. } => {
+                        window::flush_window_position(&pos_app);
+                    }
+                    _ => {}
+                });
+            }
 
             // 현재 세션 사용량을 주기적으로 읽어 프론트에 숫자로만 emit (ADR-002).
             // FS 접근·파싱은 전부 Rust 안에서, 실패해도 어항은 멈추지 않는다 (ADR-009).
