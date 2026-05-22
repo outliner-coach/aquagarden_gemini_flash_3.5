@@ -14,6 +14,9 @@ const TAN_HALF_FOV = Math.tan((FOV_DEG * Math.PI) / 180 / 2);
 // 수조 기준값 — src/scene/aquascape.ts (tankWidth 24 / tankHeight 14, 기질 y≈-7) 와 동기화.
 // 화면을 채울 기준 폭(수초·하드스케이프 밀집부). 이보다 넓은 창이면 폭을 채우며 가까워진다.
 const HERO_W = 20;
+// 수조 실제 치수(유리 박스). 휠 줌아웃 상한 계산에 쓴다 — 이보다 더 멀어지면 유리 너머가 보인다.
+const TANK_W = 24;
+const TANK_H = 14;
 // 화면 하단에 고정할 기준선(기질 바로 아래, 모래가 살짝 보이도록 여유). 줌과 무관하게
 // 뷰의 하단을 여기에 맞춰 기질이 항상 화면 바닥에 앉는다(빈 물 위로 뜨지 않게).
 const FRAME_BOTTOM_Y = -7.3;
@@ -71,9 +74,27 @@ export function deriveFraming(aspect: number): Framing {
     MAX_DISTANCE,
   );
 
-  // 가시 수직 절반 = distance * tan(fov/2). 하단을 FRAME_BOTTOM_Y 에 맞추도록 타깃을 올린다.
-  const halfVisibleH = distance * TAN_HALF_FOV;
-  const targetY = FRAME_BOTTOM_Y + halfVisibleH;
+  const targetY = targetYForDistance(distance);
 
   return { distance, targetY };
+}
+
+/**
+ * 휠 줌아웃 상한 거리. 이 거리에서 수조가 화면을 cover(폭/높이 중 한 축은 꽉 차고
+ * 다른 축은 크롭)한다. 더 멀어지면 유리 너머(수조 밖)가 드러나므로 여기서 막는다.
+ * = min(폭 cover 거리, 높이 cover 거리). 비정상 입력은 정사각(aspect=1)으로 폴백.
+ */
+export function maxCoverDistance(aspect: number): number {
+  const a = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
+  const dW = TANK_W / (2 * TAN_HALF_FOV * a);
+  const dH = TANK_H / (2 * TAN_HALF_FOV);
+  return Math.min(dW, dH);
+}
+
+/**
+ * 거리 → 카메라 타깃 y. 가시 수직 절반(distance·tan(fov/2))만큼 올려 기질
+ * (FRAME_BOTTOM_Y)을 항상 화면 하단에 고정한다 — 줌 인/아웃해도 바닥이 떠오르지 않게.
+ */
+export function targetYForDistance(distance: number): number {
+  return FRAME_BOTTOM_Y + distance * TAN_HALF_FOV;
 }

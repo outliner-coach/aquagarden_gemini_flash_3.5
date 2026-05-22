@@ -1,5 +1,45 @@
 # PROGRESS — Aquagarden
 
+## 2026-05-22 — 버그 픽스 2건 + 휠 줌 + 대사 말풍선 + 미학 아이데이션
+
+> 실사용 피드백 2건 해결: 물고기 사라짐(rAF delta 클램프), 대사 안 보임(물고기 머리 위 말풍선). 휠 줌 신규 추가. 원본 vs 현재 미학 비교로 회귀 원인 진단 후 IDEATION.md 작성. **전부 미커밋** (브랜치 `feat-0-mvp`).
+
+### 한 일
+
+- **물고기 사라짐 버그 수정** (`src/main.ts`): `clock.getDelta()` 상한 없이 쓰면, 위젯이 백그라운드·투과·퍽 상태에서 Chromium이 rAF를 멈춘 뒤 재개 시 누적 시간(수 초~분)이 한 프레임 delta로 들어와 물고기가 수조 밖으로 점프 → 사라짐. `MAX_DELTA = 0.05`(50ms) 상수 추가, 두 animate 루프(일반+캡처 클립)에서 `Math.min(clock.getDelta(), MAX_DELTA)` 클램프. 사용자 실기 확인 완료.
+
+- **마우스 휠 줌 인/아웃** (`src/scene/framing.ts`, `src/main.ts`): 순수 함수 2개 TDD로 선작성 후 구현(테스트 36개 = 기존 30 + 신규 6). `maxCoverDistance(aspect)` — 이 거리 이상이면 수조 밖(유리 너머)이 드러나므로 줌아웃 상한으로 사용. `targetYForDistance(distance)` — 기질 하단 고정 타깃 계산. `main.ts`에 `zoomDistance: number | null` 상태 + wheel 리스너(passive:false, 지수 스텝 `exp(deltaY*0.0015)`). `frameCamera()`가 상태를 반영해 `[MIN_DISTANCE, max(cover, auto)]`로 클램프. 리사이즈 시 자동 재고정. chrome/그립/퍽 위 휠은 무시.
+
+- **물고기 대사 → 머리 위 말풍선** (`index.html`, `src/main.ts`): `triggerFishLine(type, group: THREE.Object3D)`로 시그니처 변경 — 클릭한 물고기 group 참조를 `activeFishGroup`에 저장. `updateFishLinePosition(camera)` 함수가 매 rAF 프레임 group 위치를 NDC→스크린 좌표로 투영해 말풍선 `left`/`top` 갱신 → 물고기가 헤엄쳐도 대사가 따라다님. index.html `#fish-line`: 하단 고정 클래스 제거 → `absolute top-0 left-0 -translate-x-1/2 -translate-y-full max-w-[168px]`. 글자 12px → 10px. 화면 가장자리 클램프.
+
+- **미학 비교·진단** (코드 분석 + 원본 스크린샷): 원본(프로토타입)이 더 아름답게 보이는 원인 진단. ①낮 포그 밀도 0.032(현재) vs 0.045(원본) — 포그가 엷어 배경 밝게 드러남. ②낮 포그 색 `0x274320` — 초록 캐스트가 Bloom에 증폭. ③ambient `0xe2e6bc`(따뜻한 연두 크림) intensity 1.05 — 균일 조명으로 대비 소실. ④카메라 구도 — 기질이 화면 하단 25~30% 차지, 위는 빈 물.
+
+- **`docs/IDEATION.md` 신규 작성**: 미학 회귀 수정 파라미터 후보, 카메라 구도 조정, 베타 스케일 업, UX 잡일(줌 리셋·대사 타이밍), 생물 확장(새우·달팽이), v2 사용량 연동 테이블, 성능 예산, 우선순위 표.
+
+### 이어할 것
+
+- **이번 세션 커밋** — 미커밋 파일: `index.html`, `src/main.ts`, `src/scene/framing.ts`, `src/scene/framing.test.ts`, `docs/IDEATION.md`. `.DS_Store` 제외하고 파일 명시 `git add`. 후보 메시지 `feat(scene): 휠 줌·대사 말풍선·delta 클램프 + 아이데이션`.
+
+- **미학 회귀 수정** (`src/scene/lighting.ts`, 최우선): `docs/IDEATION.md §1` 파라미터 후보 적용.
+  - 낮 포그 색: `0x274320` → `0x0e2218` 전후 (어두운 청록-그린)
+  - 낮 포그 밀도: 0.032 → 0.040~0.045
+  - 낮 bg: `0x0e2113` → `0x05110a`
+  - 낮 ambient 색: `0xe2e6bc` → `0xb8cca8` (덜 황록)
+  - 낮 ambient 강도: 1.05 → 0.85
+  - 수정 후 `node scripts/capture-framing.mjs` 재캡처 → AESTHETIC 루브릭 → 사용자 사인오프
+
+- **카메라 구도 오프셋** (`src/scene/framing.ts`): `FRAME_BOTTOM_Y` -7.3 → -6.0~-6.5, 또는 `targetYForDistance`에 +0.5~1.0 고정 오프셋으로 기질 덜 노출·식재부 중심.
+
+- **베타 스케일 업** (`src/scene/fauna/fish.ts`, `spawnFauna` 첫 줄): 0.68 → 0.85~0.90.
+
+- 실행: `source "$HOME/.cargo/env" && npm run dev`. 종료 ⌘⌥Q.
+
+### 배운 것
+
+- **rAF throttle + 누적 delta = 물고기 탈출**: 상시 위젯에서 Chromium이 백그라운드 rAF를 멈추면 재개 시 `getDelta()`가 수 초를 반환. 위젯류 Three.js 앱은 반드시 `MAX_DELTA` 클램프 필요.
+- **원본 어두운 청록 포그(0.045)가 수중 분위기의 핵심**: 후처리(Bloom·코스틱·톤매핑)보다 포그 색상·밀도가 "수조" 인상을 더 크게 좌우. 이를 밝고 따뜻한 녹색으로 바꾸면 고급 후처리가 오히려 탁함을 증폭시킨다.
+- **NDC 투영으로 3D→DOM 따라다니기**: `group.position.clone().project(camera)` → `(v.x*0.5+0.5)*W, (-v.y*0.5+0.5)*H`. 매 rAF 호출로 부드럽게 따라감. 화면 가장자리 클램프 필수.
+
 ## 2026-05-22 — 위젯 UX 개편: 인윈도우 메뉴·반응형 프레이밍·물고기 대사·투과모드
 
 > 발단: 사용자가 "메뉴바(트레이) 아이콘이 안 보인다" → 진단 결과 트레이 NSStatusItem은 정상 등록됐으나 **노치+메뉴바 과밀로 가려져 접근 불가**(앱 버그 아님). 사용자가 "근본 수정" 요청 → 트레이 의존을 줄이고 어항 위에서 직접 닿는 컨트롤로 개편. 이후 실사용 피드백(이동/리사이즈 불가 + 5개 개선)까지 한 세션에 반영. **전부 미커밋**(브랜치 `feat-0-mvp`).

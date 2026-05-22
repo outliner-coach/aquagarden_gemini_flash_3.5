@@ -7,7 +7,7 @@ import { createGodRays } from './scene/godrays';
 import { setupRenderer, createPostFX } from './scene/postfx';
 import { seedRng } from './lib/rng';
 import { cameraPresets, type CameraName } from './scene/cameraPresets';
-import { deriveFraming } from './scene/framing';
+import { deriveFraming, maxCoverDistance, targetYForDistance, MIN_DISTANCE } from './scene/framing';
 import { createUsageStore, startUsageSubscription } from './usage/store';
 import { mountHud } from './hud';
 import { mountMenu } from './menu';
@@ -81,17 +81,22 @@ function getEl<T extends HTMLElement>(id: string): T | null {
 
 let fishLineTimer: number | undefined;
 
-function triggerFishLine(type: string): void {
+// 대사를 띄운 물고기 — 말풍선이 매 프레임 이 물고기 머리 위를 따라다닌다.
+let activeFishGroup: THREE.Object3D | null = null;
+const _fishLineProj = new THREE.Vector3();
+
+function triggerFishLine(type: string, group: THREE.Object3D): void {
   const box = getEl('fish-line');
   const txt = getEl('fish-line-text');
   if (!box || !txt) return;
 
-  const group = fishLines[type];
-  if (!group) return;
-  const line = group[Math.floor(Math.random() * group.length)];
+  const lines = fishLines[type];
+  if (!lines) return;
+  const line = lines[Math.floor(Math.random() * lines.length)];
   if (!line) return;
 
   txt.innerText = line;
+  activeFishGroup = group;
   box.classList.remove('chrome-hidden');
 
   // 잠시 보였다 조용히 사라진다(상주 chrome 최소화).
@@ -101,7 +106,26 @@ function triggerFishLine(type: string): void {
 
 function closeFishLine(): void {
   window.clearTimeout(fishLineTimer);
+  activeFishGroup = null;
   getEl('fish-line')?.classList.add('chrome-hidden');
+}
+
+// 말풍선을 물고기 머리 위(스크린 좌표)로 옮긴다. 매 프레임 호출(물고기가 헤엄쳐 이동).
+function updateFishLinePosition(camera: THREE.PerspectiveCamera): void {
+  if (!activeFishGroup) return;
+  const box = getEl('fish-line');
+  if (!box || box.classList.contains('chrome-hidden')) return;
+
+  _fishLineProj.copy(activeFishGroup.position).project(camera);
+  if (_fishLineProj.z > 1) return; // 카메라 뒤(이론상 없음) — 마지막 위치 유지
+
+  const x = (_fishLineProj.x * 0.5 + 0.5) * window.innerWidth;
+  const y = (-_fishLineProj.y * 0.5 + 0.5) * window.innerHeight;
+  // 머리 위 약간(32px) 띄우고, 화면 가장자리에서 잘리지 않게 클램프(말풍선은 bottom-center 기준).
+  const cx = Math.min(Math.max(x, 84), window.innerWidth - 84);
+  const cy = Math.min(Math.max(y - 32, 18), window.innerHeight - 12);
+  box.style.left = `${cx}px`;
+  box.style.top = `${cy}px`;
 }
 
 // --- 조명 모드 버튼 UI 상태 ---
@@ -137,8 +161,27 @@ function applyCameraPreset(camera: THREE.PerspectiveCamera, name: CameraName): v
 // 정면 고정 시점 — 좌드래그는 창 이동에 쓰므로 수동 회전(OrbitControls)은 두지 않는다.
 const _target = new THREE.Vector3();
 const _dir = new THREE.Vector3();
+
+// 휠 줌 상태. null = 자동(반응형) 거리 그대로. 사용자가 휠을 굴리면 그 거리를 기억한다.
+let zoomDistance: number | null = null;
+
+// 현재 비율의 줌 거리 허용 범위 [가장 가까이, 가장 멀리]. 줌아웃 상한은 수조 cover 거리
+// (그 이상은 유리 너머가 보임)와 자동 프레이밍 거리 중 큰 쪽 — 자동값이 항상 범위 안.
+function zoomBounds(aspect: number): { min: number; max: number } {
+  return { min: MIN_DISTANCE, max: Math.max(maxCoverDistance(aspect), deriveFraming(aspect).distance) };
+}
+
 function frameCamera(camera: THREE.PerspectiveCamera, aspect: number): void {
-  const { distance, targetY } = deriveFraming(aspect);
+  let distance: number;
+  let targetY: number;
+  if (zoomDistance == null) {
+    ({ distance, targetY } = deriveFraming(aspect));
+  } else {
+    const { min, max } = zoomBounds(aspect);
+    distance = Math.min(Math.max(zoomDistance, min), max);
+    zoomDistance = distance; // 비율 변경(리사이즈) 후에도 범위 안으로 재고정
+    targetY = targetYForDistance(distance);
+  }
   _target.set(0, targetY, 0);
   _dir.copy(camera.position).sub(_target);
   if (_dir.lengthSq() < 1e-6) _dir.set(0, 3, 22);
@@ -158,6 +201,10 @@ function applyOpacity(canvas: HTMLCanvasElement, value: number): void {
 
 // 캡처 결정론을 위한 고정 타임스텝 워밍업 — 동일 시드 + 동일 스텝 → 동일 프레임.
 const CAPTURE_FIXED_DELTA = 1 / 60;
+// rAF 프레임 간격 상한(초). 위젯이 백그라운드/투과/퍽 접힘으로 rAF가 throttle·정지되면
+// clock.getDelta()가 누적 벽시계 시간(수 초~분)을 한 번에 반환 → 물고기가 한 프레임에
+// 수조 밖으로 점프해 사라진다. 큰 delta를 잘라 시뮬레이션이 튀지 않고 이어지게 한다.
+const MAX_DELTA = 0.05;
 const CAPTURE_WARMUP_STEPS = 300;
 
 // 캡처 모드에서 HUD에 주입할 고정 스냅샷(결정론) — 라이트 게이트가 HUD 룩을 검토한다.
@@ -227,7 +274,7 @@ function init(): void {
       const clock = new THREE.Clock();
       const renderClip = (): void => {
         requestAnimationFrame(renderClip);
-        const delta = clock.getDelta();
+        const delta = Math.min(clock.getDelta(), MAX_DELTA);
         const time = clock.getElapsedTime();
         lighting.update(renderer, scene, time);
         animatePlants(aquascape.animatedPlants, time);
@@ -368,12 +415,31 @@ function init(): void {
       let obj: THREE.Object3D | null = hits[0].object;
       while (obj && !obj.userData.interactiveType) obj = obj.parent;
       if (obj && obj.userData.interactiveType) {
-        triggerFishLine(obj.userData.interactiveType as string);
+        triggerFishLine(obj.userData.interactiveType as string, obj);
+        updateFishLinePosition(camera); // 첫 프레임 전 즉시 머리 위에 배치
         return;
       }
     }
     closeFishLine();
   });
+
+  // 마우스 휠 = 줌 인/아웃. 줌아웃은 수조를 벗어나지 않게 cover 거리에서 멈춘다.
+  // (chrome/그립/퍽 위에서는 무시 — 투명도 슬라이더 등과 충돌 방지.)
+  window.addEventListener(
+    'wheel',
+    (event) => {
+      if (!onBackground(event.target as HTMLElement | null)) return;
+      event.preventDefault();
+      const aspect = window.innerWidth / window.innerHeight;
+      const { min, max } = zoomBounds(aspect);
+      const base = zoomDistance ?? deriveFraming(aspect).distance;
+      // 아래로 스크롤(deltaY>0)=줌아웃=거리 증가. 지수 스텝으로 비율과 무관하게 매끄럽게.
+      const next = base * Math.exp(event.deltaY * 0.0015);
+      zoomDistance = Math.min(Math.max(next, min), max);
+      frameCamera(camera, aspect);
+    },
+    { passive: false },
+  );
 
   // Resize — 비율 갱신 + 반응형 재프레이밍(가로/세로 대응).
   window.addEventListener('resize', () => {
@@ -388,13 +454,14 @@ function init(): void {
   const clock = new THREE.Clock();
   function animate(): void {
     requestAnimationFrame(animate);
-    const delta = clock.getDelta();
+    const delta = Math.min(clock.getDelta(), MAX_DELTA);
     const time = clock.getElapsedTime();
 
     lighting.update(renderer, scene, time);
     animatePlants(aquascape.animatedPlants, time);
     animateBubbles(aquascape.bubbles, delta, time);
     fishList.forEach((fish) => fish.update(delta, time, fishList));
+    updateFishLinePosition(camera); // 대사 말풍선이 물고기 머리 위를 따라다닌다
 
     postfx.render();
   }

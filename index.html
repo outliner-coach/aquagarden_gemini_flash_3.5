@@ -110,9 +110,10 @@
         </button>
       </div>
 
-      <!-- 물고기 대사 (하단 중앙) — 클릭한 물고기의 작고 사색적인 한마디. 잠시 보였다 사라진다. -->
-      <div id="fish-line" class="chrome chrome-hidden absolute left-1/2 bottom-5 -translate-x-1/2 w-[82%] pointer-events-none text-center">
-        <p id="fish-line-text" class="fish-line-text quote-font text-[12px] leading-relaxed"></p>
+      <!-- 물고기 대사 — 클릭한 물고기 머리 위를 따라다니는 작고 사색적인 한마디(JS가 left/top 설정).
+           bottom-center 기준점이 물고기 위에 오도록 translate. 잠시 보였다 사라진다. -->
+      <div id="fish-line" class="chrome chrome-hidden absolute top-0 left-0 -translate-x-1/2 -translate-y-full max-w-[168px] pointer-events-none text-center">
+        <p id="fish-line-text" class="fish-line-text quote-font text-[10px] leading-snug"></p>
       </div>
 
       <!-- 접힘(잠깐 숨기기) 상태의 ⋯ 퍽 — body.collapsed 일 때만 표시. 클릭하면 어항 복귀. -->
