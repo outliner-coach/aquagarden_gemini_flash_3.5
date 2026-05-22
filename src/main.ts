@@ -333,6 +333,7 @@ function init(): void {
     onCollapse: () => {
       // "잠깐 숨기기" — 어항을 작은 ⋯ 퍽으로 접는다(창은 Rust가 축소·복귀).
       document.body.classList.add('collapsed');
+      syncRenderLoop(); // 접힘 → 렌더 정지(§7)
       void collapseWindow();
     },
     onQuit: () => void quitApp(),
@@ -343,6 +344,7 @@ function init(): void {
   // 접힌 ⋯ 퍽 클릭 → 어항 복귀.
   getEl('puck')?.addEventListener('click', () => {
     document.body.classList.remove('collapsed');
+    syncRenderLoop(); // 복귀 → 렌더 재개(§7)
     void restoreWindow();
   });
 
@@ -450,12 +452,19 @@ function init(): void {
     postfx.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // Render loop
+  // Render loop — §7(ADR-007 보완): 퍽 접힘·탭 숨김 시 rAF를 완전 정지해 보이지 않을 때 GPU/CPU 부담 0.
+  // 다시 보이면 재개하며, 정지 동안 쌓인 벽시계 시간(delta)은 버려 물고기가 한 프레임에 점프하지 않게 한다.
   const clock = new THREE.Clock();
-  function animate(): void {
-    requestAnimationFrame(animate);
+  let rafId = 0;
+  let running = false;
+  let simTime = 0; // 논리 시뮬레이션 시간 — clock.getElapsedTime()은 재개 시 정지 구간만큼 점프하므로,
+  //                  클램프된 delta만 직접 누적해 조명·식물·물고기 phase가 건너뛰지 않게 한다(Codex 리뷰).
+  function frame(): void {
+    if (!running) return; // 정지 후 큐에 남아 한 번 더 발화하는 프레임 방어
+    rafId = requestAnimationFrame(frame);
     const delta = Math.min(clock.getDelta(), MAX_DELTA);
-    const time = clock.getElapsedTime();
+    simTime += delta;
+    const time = simTime;
 
     lighting.update(renderer, scene, time);
     animatePlants(aquascape.animatedPlants, time);
@@ -465,7 +474,24 @@ function init(): void {
 
     postfx.render();
   }
-  animate();
+  function startRenderLoop(): void {
+    if (running) return;
+    running = true;
+    clock.getDelta(); // 정지 동안 누적된 delta 폐기
+    rafId = requestAnimationFrame(frame);
+  }
+  function stopRenderLoop(): void {
+    if (!running) return;
+    running = false;
+    cancelAnimationFrame(rafId);
+  }
+  // 보이지 않으면(탭 숨김 또는 퍽 접힘) 정지, 보이면 재개. collapse/restore 핸들러도 이 함수를 호출한다.
+  function syncRenderLoop(): void {
+    if (document.hidden || document.body.classList.contains('collapsed')) stopRenderLoop();
+    else startRenderLoop();
+  }
+  document.addEventListener('visibilitychange', syncRenderLoop);
+  syncRenderLoop(); // 로드 시 가시성에 맞춰 시작(숨김 상태면 정지)
 
   // 로딩 화면 페이드아웃
   window.setTimeout(() => {
