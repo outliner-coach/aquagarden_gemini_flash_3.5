@@ -381,9 +381,10 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
     // 톤 변주는 채널별로 상관(밝은↔어두운 올리브)되게 — 기존 단일 정수 가산은 채널 경계를 넘어
     // 청·자색 아웃라이어를 만들었다(팔레트 이탈). random() 1회 draw만 유지(결정론 보존).
     const t = random() - 0.5; // [-0.5, 0.5)
-    const r = THREE.MathUtils.clamp(0x5a + Math.round(t * 0x12), 0x42, 0x6b);
-    const g = THREE.MathUtils.clamp(0x6e + Math.round(t * 0x16), 0x54, 0x8e); // 상한 0x8e=§2 green 상한
-    const b = THREE.MathUtils.clamp(0x44 + Math.round(t * 0x0e), 0x2c, 0x52);
+    // 2차 감산(Codex §1 H): 수초 녹색을 한 단계 더 어둡게 눌러 청록 배경과 레이어 분리.
+    const r = THREE.MathUtils.clamp(0x50 + Math.round(t * 0x12), 0x3c, 0x62);
+    const g = THREE.MathUtils.clamp(0x64 + Math.round(t * 0x16), 0x4c, 0x80); // 상한 0x80 (§2 0x8e보다 더 눌러 분리)
+    const b = THREE.MathUtils.clamp(0x3e + Math.round(t * 0x0e), 0x28, 0x4c);
     return (r << 16) | (g << 8) | b;
   };
   for (let i = 0; i < 78; i++) {
@@ -398,8 +399,8 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
     const z = -2.5 + random() * 5;
     const y = getSubstrateHeight(x, z) + 0.1;
     const height = 1.0 + random() * 1.9;
-    // 감산: 중경 단색 라임(0x6fae3f) → 올리브-세이지(0x6a8540)로 채도↓.
-    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x6a8540, 0.05);
+    // 감산→2차: 중경 라임(0x6fae3f)→올리브(0x6a8540)→더 어두운 올리브(0x5f7838)로 눌러 배경 분리.
+    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x5f7838, 0.05);
   }
   // 적색 줄기수초 — 감산: 개수 62 → 44 로 솎고, x 분포 폭을 넓혀(6.5+5 → 5.5+7) '벽'을 분산.
   for (let i = 0; i < 44; i++) {
@@ -412,9 +413,10 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
     const red = r < 0.4 ? 0x9c2f2b : r < 0.7 ? 0xb0432f : 0x6e2420;
     createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, red, 0.08);
   }
-  // 전경 카펫 — 감산: 40 → 30 으로 솎고, 최전경(z<2.5)을 비워 카메라-피사체 사이 '맑은 물' 레이어 확보.
-  for (let i = 0; i < 30; i++) {
-    const x = -9 + random() * 18;
+  // 전경 카펫 — 3차 감산(Codex): 24 → 20 로 더 솎고, 중앙 통로를 |x|<5 로 넓혀 모래 길 입구를 명확히.
+  for (let i = 0; i < 20; i++) {
+    const side = random() < 0.5 ? -1 : 1;
+    const x = side * (5 + random() * 4); // ±[5,9], 중앙 통로 확대
     const z = 2.5 + random() * 3; // z 2.5~5.5 (최전경 비움)
     const y = getSubstrateHeight(x, z) + 0.1;
     const height = 0.5 + random() * 0.8;

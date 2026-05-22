@@ -46,11 +46,25 @@ impl UsageSnapshot {
     }
 }
 
-/// 모델 id → 컨텍스트 한도. opus-4-7 계열만 1M, 그 외는 알 수 없음(`None`).
-/// (haiku 등 다른 모델의 정밀 한도는 v2에서.)
+/// model id 가 family 와 일치하는지 — 정확히 같거나, 뒤에 '-'(날짜) 또는 '['(예: [1m])만 붙는 경우.
+/// "claude-opus-4-70" 같은 코어스 오매칭을 막는다.
+fn is_model(model: &str, family: &str) -> bool {
+    model
+        .strip_prefix(family)
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with('-') || rest.starts_with('['))
+}
+
+/// 모델 id → 컨텍스트 한도(§6-1). 공식 컨텍스트 윈도우(Anthropic docs, Codex 대조):
+/// - opus-4-7: 1,000,000 (CC 실측 확인 — memory `aquagarden-usage-source`).
+/// - sonnet-4-6: 1,000,000.
+/// - haiku-4-5: 200,000.
+/// - 그 외(미지·구세대·미검증 미래 변형): None — 틀린 분모로 잘못된 %를 보이느니
+///   빈 상태가 정직하다(ADR-009). 특히 미검증 모델에 200K를 박으면 1M 모델에서 5배 과대 표시된다.
 pub fn context_limit(model: &str) -> Option<u64> {
-    if model.starts_with("claude-opus-4-7") {
+    if is_model(model, "claude-opus-4-7") || is_model(model, "claude-sonnet-4-6") {
         Some(1_000_000)
+    } else if is_model(model, "claude-haiku-4-5") {
+        Some(200_000)
     } else {
         None
     }

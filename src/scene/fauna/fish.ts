@@ -190,7 +190,7 @@ export class Fish {
     this.currentSpeed = this.baseSpeed * (0.8 + random() * 0.5);
   }
 
-  update(delta: number, time: number, flock?: Fish[]): void {
+  update(delta: number, time: number, flock?: Fish[], speedMul = 1): void {
     const distanceToTarget = this.position.distanceTo(this.target);
     if (distanceToTarget < 2.0) {
       this.pickNewTarget();
@@ -234,7 +234,7 @@ export class Fish {
     this.group.rotation.z = THREE.MathUtils.lerp(this.group.rotation.z, pitch, 0.05);
 
     // 위치 전진
-    this.velocity.copy(dir).multiplyScalar(this.currentSpeed);
+    this.velocity.copy(dir).multiplyScalar(this.currentSpeed * speedMul);
     this.position.addScaledVector(this.velocity, delta);
     this.group.position.copy(this.position);
 
@@ -254,14 +254,16 @@ export class Fish {
 export function spawnFauna(scene: THREE.Scene): Fish[] {
   const fishList: Fish[] = [];
 
-  fishList.push(new Fish(scene, 'betta', 0xd32f2f, [0.68, 0.68, 0.68], 1.4));
+  // §3 스케일 업(0.68→0.78) + §1 H 톤 조율: 채도/명도↓(0xd32f2f→0xc62828=AESTHETIC §2 베타색).
+  // 3차(Codex): 0.82는 시선 과점 → 0.78로 절충(원본 0.68보다 크되 화면을 무겁게 않게).
+  fishList.push(new Fish(scene, 'betta', 0xc62828, [0.78, 0.78, 0.78], 1.4));
 
   for (let i = 0; i < 6; i++) {
     fishList.push(new Fish(scene, 'tetra', 0x3a3a3a, [0.45, 0.45, 0.45], 3.8));
   }
 
   for (let i = 0; i < 3; i++) {
-    fishList.push(new Fish(scene, 'corydoras', 0xe0c1b3, [0.65, 0.65, 0.65], 2.2));
+    fishList.push(new Fish(scene, 'corydoras', 0xe0c1b3, [0.70, 0.70, 0.70], 2.2)); // §3 바닥 청소부 존재감 0.65→0.70
   }
 
   return fishList;

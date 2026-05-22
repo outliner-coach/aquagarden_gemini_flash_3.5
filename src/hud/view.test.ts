@@ -46,6 +46,18 @@ describe('deriveHudView', () => {
     const v = deriveHudView(snap({ context_pct: 130, context_limit: 1_000_000 }));
     expect(v.gaugeWidth).toBe(100);
   });
+
+  it('레벨: <75 normal, 75~<90 warn, >=90 critical (§6-3 임박 강조)', () => {
+    expect(deriveHudView(snap({ context_pct: 50, context_limit: 1_000_000 })).level).toBe('normal');
+    expect(deriveHudView(snap({ context_pct: 75, context_limit: 1_000_000 })).level).toBe('warn');
+    expect(deriveHudView(snap({ context_pct: 89.9, context_limit: 1_000_000 })).level).toBe('warn');
+    expect(deriveHudView(snap({ context_pct: 90, context_limit: 1_000_000 })).level).toBe('critical');
+  });
+
+  it('데이터 없음·한도 미상 → level normal', () => {
+    expect(deriveHudView(null).level).toBe('normal');
+    expect(deriveHudView(snap({ context_pct: null })).level).toBe('normal');
+  });
 });
 
 describe('formatTokens', () => {

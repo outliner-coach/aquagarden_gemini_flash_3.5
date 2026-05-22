@@ -58,6 +58,10 @@ body {
 .hud-bright {
   opacity: 1;
 }
+/* §6-3 컨텍스트 임박 시 HUD를 흐림 상태와 무관하게 또렷하게 */
+.hud-alert {
+  opacity: 1 !important;
+}
 
 /* 물고기 대사 — 씬 위에 얹는 작고 사색적인 한마디. 패널 없이 텍스트만(은은한 그림자로 가독). */
 .fish-line-text {
@@ -102,4 +106,9 @@ body.collapsed .resize-grip {
 }
 body.collapsed #puck {
   display: flex;
+}
+
+/* §4-5 투과모드 활성 시 ⋯ 트리거 에메랄드 글로우 */
+#menu-button.menu-passthrough-on {
+  filter: drop-shadow(0 0 5px rgb(52 211 153 / 0.75));
 }

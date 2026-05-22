@@ -21,8 +21,8 @@ export const colors: Record<LightMode, ColorTheme> = {
     ambient: 0xbcc4b8, // 거의 중립 세이지 (녹색 우세 제거 — fill의 황록 캐스트 차단)
     dirLight: 0xfff0c8, // 따뜻한 햇빛
     topLight: 0xf5efc4, // 따뜻한 수면광
-    fog: 0x0e2218, // 어두운 청록-그린 수중 (배경을 가라앉혀 깊이감 복귀)
-    bg: 0x05110a, // 거의 검정에 가까운 어두운 녹색
+    fog: 0x0b2026, // 2차(Codex §1 H): 청록 쪽으로 미세 이동(녹<청)해 배경 물색을 식재 녹색과 분리
+    bg: 0x04110f, // 거의 검정에 가까운 어두운 청록
   },
   dusk: {
     ambient: 0xf2cda6,
@@ -109,6 +109,8 @@ export class Lighting {
   private causticIntensity = 0.55;
 
   mode: LightMode = 'day';
+  /** §6-2 사용량 연동 — 포그 밀도 배수(한도 임박 시 물을 탁하게). 렌더 루프가 설정한다. */
+  fogDensityMul = 1;
   private target: TargetLightSettings | null = null;
 
   constructor(scene: THREE.Scene, tankHeight: number) {
@@ -203,7 +205,7 @@ export class Lighting {
 
     if (scene.fog instanceof THREE.FogExp2) {
       scene.fog.color.lerp(t.fogColor, lerpSpeed);
-      scene.fog.density = THREE.MathUtils.lerp(scene.fog.density, t.fogDensity, lerpSpeed);
+      scene.fog.density = THREE.MathUtils.lerp(scene.fog.density, t.fogDensity * this.fogDensityMul, lerpSpeed);
     }
 
     const clear = renderer.getClearColor(new THREE.Color());

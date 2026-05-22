@@ -3,12 +3,14 @@ import * as THREE from 'three';
 import { buildAquascape, animatePlants, animateBubbles, tankHeight } from './scene/aquascape';
 import { Lighting, colors, type LightMode } from './scene/lighting';
 import { spawnFauna } from './scene/fauna/fish';
+import { spawnInverts } from './scene/fauna/inverts';
 import { createGodRays } from './scene/godrays';
 import { setupRenderer, createPostFX } from './scene/postfx';
 import { seedRng } from './lib/rng';
 import { cameraPresets, type CameraName } from './scene/cameraPresets';
 import { deriveFraming, maxCoverDistance, targetYForDistance, MIN_DISTANCE } from './scene/framing';
 import { createUsageStore, startUsageSubscription } from './usage/store';
+import { usageMood, type SceneMood } from './scene/mood';
 import { mountHud } from './hud';
 import { mountMenu } from './menu';
 import {
@@ -62,16 +64,32 @@ const fishLines: Record<string, string[]> = {
     '천천히 헤엄쳐도 괜찮아. 물은 어디로도 도망가지 않으니까.',
     '혼자라는 건 외로움이 아니라, 나를 가만히 들여다보는 시간이야.',
     '지느러미를 활짝 펴는 데엔 이유가 없어. 그저 오늘이 좋아서.',
+    '거울 속 나를 보고 한껏 부풀려 본다. 겁이 아니라, 살아있다는 인사야.',
+    '흐르는 물에 몸을 맡기는 법을 익히는 데 한평생이 걸렸어.',
   ],
   tetra: [
     '함께 헤엄치면, 무서운 것도 조금은 작아져.',
     '작은 빛이라도 모이면 강이 되는걸.',
     '서두르지 않아도 돼. 다 같이 가면 되니까.',
+    '무리에서 한 박자 늦어도, 아무도 나를 탓하지 않아.',
+    '반짝임은 비늘이 아니라 함께 있다는 마음에서 나와.',
   ],
   corydoras: [
     '바닥에도 볕은 들어. 천천히 살아도 충분해.',
     '남이 보지 않는 곳을 돌보는 일에도 조용한 기쁨이 있어.',
     '오늘은 모래알을 세며 쉬어가는 날.',
+    '고개 숙여 바닥을 살피는 일이, 실은 가장 멀리 보는 길일지도.',
+    '느린 게 게으른 건 아니야. 그저 꼼꼼할 뿐이지.',
+  ],
+  shrimp: [
+    '이끼는 아무리 먹어도 줄지 않아. 그래서 마음이 놓여.',
+    '작고 투명해도, 이 수조를 닦는 건 나야.',
+    '아무도 안 보는 구석부터 깨끗해지는 게 좋아.',
+  ],
+  snail: [
+    '느려도 결국 닿아. 서두를 이유가 없지.',
+    '유리벽 너머의 세상도, 천천히 구경하는 중이야.',
+    '집을 늘 지고 다니니, 어디든 내 자리가 돼.',
   ],
 };
 
@@ -101,7 +119,7 @@ function triggerFishLine(type: string, group: THREE.Object3D): void {
 
   // 잠시 보였다 조용히 사라진다(상주 chrome 최소화).
   window.clearTimeout(fishLineTimer);
-  fishLineTimer = window.setTimeout(() => closeFishLine(), 6000);
+  fishLineTimer = window.setTimeout(() => closeFishLine(), 8000); // §4-2: 6s→8s (읽을 여유)
 }
 
 function closeFishLine(): void {
@@ -247,6 +265,7 @@ function init(): void {
   const lighting = new Lighting(scene, tankHeight);
   const aquascape = buildAquascape(scene);
   const fishList = spawnFauna(scene);
+  const inverts = spawnInverts(scene); // §5 새우·달팽이(저서 무척추)
   createGodRays(scene); // 상단 광원에서 떨어지는 미세한 빛줄기(정적)
 
   // 시네마틱 포스트프로세싱(은은한 Bloom + DoF + 톤매핑 마감). 캡처·일반 경로 공통.
@@ -280,6 +299,7 @@ function init(): void {
         animatePlants(aquascape.animatedPlants, time);
         animateBubbles(aquascape.bubbles, delta, time);
         fishList.forEach((fish) => fish.update(delta, time, fishList));
+        inverts.forEach((c) => c.update(delta, time));
         postfx.render();
       };
       renderClip();
@@ -295,6 +315,7 @@ function init(): void {
       animatePlants(aquascape.animatedPlants, t);
       animateBubbles(aquascape.bubbles, CAPTURE_FIXED_DELTA, t);
       fishList.forEach((fish) => fish.update(CAPTURE_FIXED_DELTA, t, fishList));
+      inverts.forEach((c) => c.update(CAPTURE_FIXED_DELTA, t));
     }
     postfx.render();
     window.__captureReady = true;
@@ -305,8 +326,11 @@ function init(): void {
   // 시작 시 현재 창 비율에 맞춰 프레이밍(가로/세로 대응).
   frameCamera(camera, window.innerWidth / window.innerHeight);
 
-  // 클릭 대상은 물고기뿐 — 클릭하면 그 물고기의 작은 대사를 보여준다.
-  const fishObjects: THREE.Object3D[] = fishList.map((f) => f.group);
+  // 클릭 대상은 물고기 + 무척추 — 클릭하면 그 생물의 작은 대사를 보여준다.
+  const fishObjects: THREE.Object3D[] = [
+    ...fishList.map((f) => f.group),
+    ...inverts.map((c) => c.group),
+  ];
 
   setLightMode(lighting, 'day', false);
   // 저장된 조명 모드 복원(없으면 day 유지). 비-Tauri 환경은 조용히 무시.
@@ -333,6 +357,7 @@ function init(): void {
     onCollapse: () => {
       // "잠깐 숨기기" — 어항을 작은 ⋯ 퍽으로 접는다(창은 Rust가 축소·복귀).
       document.body.classList.add('collapsed');
+      syncRenderLoop(); // 접힘 → 렌더 정지(§7)
       void collapseWindow();
     },
     onQuit: () => void quitApp(),
@@ -340,17 +365,50 @@ function init(): void {
     reportHole: (x, y, w, h) => void updatePassthroughHole(x, y, w, h),
   });
 
-  // 접힌 ⋯ 퍽 클릭 → 어항 복귀.
-  getEl('puck')?.addEventListener('click', () => {
-    document.body.classList.remove('collapsed');
-    void restoreWindow();
-  });
+  // 접힌 ⋯ 퍽: 단순 클릭 → 어항 복귀, 5px 이상 드래그 → 퍽째로 창 이동(§4-6).
+  const puckEl = getEl('puck');
+  if (puckEl) {
+    let puckDownAt: { x: number; y: number } | null = null;
+    let puckDragging = false;
+    puckEl.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      puckDownAt = { x: event.clientX, y: event.clientY };
+      puckDragging = false;
+    });
+    puckEl.addEventListener('pointermove', (event) => {
+      if (!puckDownAt || puckDragging) return;
+      if (Math.hypot(event.clientX - puckDownAt.x, event.clientY - puckDownAt.y) >= DRAG_THRESHOLD) {
+        puckDragging = true;
+        void startWindowDrag(); // OS가 창(퍽) 이동을 인계받는다.
+      }
+    });
+    puckEl.addEventListener('pointerup', () => {
+      const wasDrag = puckDragging;
+      puckDownAt = null;
+      puckDragging = false;
+      if (wasDrag) return; // 드래그였으면 복귀하지 않는다.
+      document.body.classList.remove('collapsed');
+      syncRenderLoop(); // 복귀 → 렌더 재개(§7)
+      void restoreWindow();
+    });
+    puckEl.addEventListener('pointercancel', () => {
+      puckDownAt = null; // OS 드래그 인계/취소 시 상태 정리
+      puckDragging = false;
+    });
+  }
 
   // 사용량 HUD — Rust(usage.rs)의 'usage://snapshot' 이벤트만 구독한다(FS 접근 없음).
   // 구독 시작 실패(비-Tauri 환경)는 무시 — 어항은 멈추지 않는다.
   const usageStore = createUsageStore();
   mountHud(usageStore);
   void startUsageSubscription(usageStore);
+
+  // §6-2 어항↔사용량 연동 — 컨텍스트 점유율이 오르면 물이 탁해지고 물고기가 둔해진다.
+  // 라이브 루프만 반영(캡처 경로는 고정 스냅샷·CALM 유지).
+  let currentMood: SceneMood = usageMood(null);
+  usageStore.subscribe(() => {
+    currentMood = usageMood(usageStore.snapshot?.context_pct ?? null);
+  });
 
   // 조명 버튼 배선
   (['day', 'dusk', 'night'] as const).forEach((m) => {
@@ -403,7 +461,7 @@ function init(): void {
     const wasDrag = dragging;
     downAt = null;
     dragging = false;
-    if (!started || wasDrag || event.button !== 0) return;
+    if (!started || wasDrag || event.button !== 0 || event.detail > 1) return; // 더블클릭(줌 리셋) 2번째+ 클릭은 raycast 스킵
     if (!onBackground(event.target as HTMLElement | null)) return;
 
     // 단순 클릭 → 물고기 raycast.
@@ -441,6 +499,14 @@ function init(): void {
     { passive: false },
   );
 
+  // 더블클릭(배경) = 줌 리셋 → 자동 반응형 프레이밍 거리로 복귀(§4-1).
+  window.addEventListener('dblclick', (event) => {
+    if (!onBackground(event.target as HTMLElement | null)) return;
+    if (zoomDistance == null) return; // 이미 자동 거리면 무시
+    zoomDistance = null;
+    frameCamera(camera, window.innerWidth / window.innerHeight);
+  });
+
   // Resize — 비율 갱신 + 반응형 재프레이밍(가로/세로 대응).
   window.addEventListener('resize', () => {
     const aspect = window.innerWidth / window.innerHeight;
@@ -450,22 +516,48 @@ function init(): void {
     postfx.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // Render loop
+  // Render loop — §7(ADR-007 보완): 퍽 접힘·탭 숨김 시 rAF를 완전 정지해 보이지 않을 때 GPU/CPU 부담 0.
+  // 다시 보이면 재개하며, 정지 동안 쌓인 벽시계 시간(delta)은 버려 물고기가 한 프레임에 점프하지 않게 한다.
   const clock = new THREE.Clock();
-  function animate(): void {
-    requestAnimationFrame(animate);
+  let rafId = 0;
+  let running = false;
+  let simTime = 0; // 논리 시뮬레이션 시간 — clock.getElapsedTime()은 재개 시 정지 구간만큼 점프하므로,
+  //                  클램프된 delta만 직접 누적해 조명·식물·물고기 phase가 건너뛰지 않게 한다(Codex 리뷰).
+  function frame(): void {
+    if (!running) return; // 정지 후 큐에 남아 한 번 더 발화하는 프레임 방어
+    rafId = requestAnimationFrame(frame);
     const delta = Math.min(clock.getDelta(), MAX_DELTA);
-    const time = clock.getElapsedTime();
+    simTime += delta;
+    const time = simTime;
 
+    lighting.fogDensityMul = currentMood.fogDensityMul; // §6-2 사용량 연동
     lighting.update(renderer, scene, time);
     animatePlants(aquascape.animatedPlants, time);
     animateBubbles(aquascape.bubbles, delta, time);
-    fishList.forEach((fish) => fish.update(delta, time, fishList));
+    fishList.forEach((fish) => fish.update(delta, time, fishList, currentMood.fishSpeedMul));
+    inverts.forEach((c) => c.update(delta, time));
     updateFishLinePosition(camera); // 대사 말풍선이 물고기 머리 위를 따라다닌다
 
     postfx.render();
   }
-  animate();
+  function startRenderLoop(): void {
+    if (running) return;
+    running = true;
+    clock.getDelta(); // 정지 동안 누적된 delta 폐기
+    rafId = requestAnimationFrame(frame);
+  }
+  function stopRenderLoop(): void {
+    if (!running) return;
+    running = false;
+    cancelAnimationFrame(rafId);
+  }
+  // 보이지 않으면(탭 숨김 또는 퍽 접힘) 정지, 보이면 재개. collapse/restore 핸들러도 이 함수를 호출한다.
+  function syncRenderLoop(): void {
+    if (document.hidden || document.body.classList.contains('collapsed')) stopRenderLoop();
+    else startRenderLoop();
+  }
+  document.addEventListener('visibilitychange', syncRenderLoop);
+  syncRenderLoop(); // 로드 시 가시성에 맞춰 시작(숨김 상태면 정지)
 
   // 로딩 화면 페이드아웃
   window.setTimeout(() => {
