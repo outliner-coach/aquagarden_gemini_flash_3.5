@@ -13,7 +13,9 @@
     {
       "step": 1,
       "name": "subtraction-pass",
-      "status": "pending"
+      "status": "blocked",
+      "blocked_reason": "게이트2 사용자 사인오프 대기 — phases/1-aesthetic/captures/step1/ 캡처 검토 요청. 게이트1(designer) 전 항목 Pass, build/test 그린.",
+      "started_at": "2026-05-22T15:04:04+0900"
     }
   ],
   "created_at": "2026-05-22T15:00:56+0900"

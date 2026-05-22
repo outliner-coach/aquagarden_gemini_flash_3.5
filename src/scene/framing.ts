@@ -13,7 +13,7 @@ const TAN_HALF_FOV = Math.tan((FOV_DEG * Math.PI) / 180 / 2);
 
 // 수조 기준값 — src/scene/aquascape.ts (tankWidth 24 / tankHeight 14, 기질 y≈-7) 와 동기화.
 // 화면을 채울 기준 폭(수초·하드스케이프 밀집부). 이보다 넓은 창이면 폭을 채우며 가까워진다.
-const HERO_W = 20;
+const HERO_W = 22;
 // 수조 실제 치수(유리 박스). 휠 줌아웃 상한 계산에 쓴다 — 이보다 더 멀어지면 유리 너머가 보인다.
 const TANK_W = 24;
 const TANK_H = 14;
@@ -21,9 +21,10 @@ const TANK_H = 14;
 // 뷰의 하단을 여기에 맞춰 기질이 항상 화면 바닥에 앉는다(빈 물 위로 뜨지 않게).
 const FRAME_BOTTOM_Y = -7.3;
 // 가로/정사각 기본 줌에서 보일 수직 범위(기질~수초 위 약간의 물).
-const NORMAL_VISIBLE_H = 11;
+// 감산: 11 → 12.5 로 키워 카메라를 ~14% 뒤로(과근접 해소, 피사체-카메라 사이 '맑은 물' 확보).
+const NORMAL_VISIBLE_H = 12.5;
 // 매우 좁은(세로) 창에서 보일 수직 범위 — 더 작게 줄여 식재부로 줌인(몰입, 빈 물 최소화).
-const TALL_VISIBLE_H = 7.5;
+const TALL_VISIBLE_H = 8;
 // 세로 줌인 보간이 TALL 에 도달하는 비율(이보다 좁으면 TALL 고정).
 const A_TALL = 0.45;
 

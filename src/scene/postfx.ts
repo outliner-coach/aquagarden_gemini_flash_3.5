@@ -22,8 +22,8 @@ const GradeShader = {
     uFrame: { value: 0 },
     uVignette: { value: 0.32 },
     uGrain: { value: 0.022 },
-    uSaturation: { value: 1.27 }, // 무성한 녹색 채도↑ (sample.jpeg 정글감)
-    uWarm: { value: 0.085 }, // 따뜻한 톤 시프트 (차가운 청록 데모틸 제거)
+    uSaturation: { value: 1.08 }, // 감산: 녹색 과채도↓ (1.27 → 1.08, 형광 라임화 방지)
+    uWarm: { value: 0.0 }, // 감산: 황록 캐스트 제거 (0.085 → 0, 톤 시프트 중립화 — 잔여 황록 캐스트 차단)
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -95,7 +95,7 @@ export function createPostFX(
     new THREE.Vector2(size.x, size.y),
     0.5, // strength
     0.45, // radius (헤일로 반경 축소 → 발광 요소가 비대한 후광을 끌지 않게)
-    0.72, // threshold (코스틱 하이라이트·갓레이·은은한 발광만 잡힘)
+    1.0, // threshold (감산: 0.72 → 1.0, 초록 계열 전체 번짐 차단 — 네온테트라 emissive·코스틱 하이라이트만)
   );
   composer.addPass(bloom);
 
