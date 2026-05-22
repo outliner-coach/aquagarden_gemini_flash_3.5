@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { buildAquascape, animatePlants, animateBubbles, tankHeight } from './scene/aquascape';
 import { Lighting, colors, type LightMode } from './scene/lighting';
 import { spawnFauna } from './scene/fauna/fish';
+import { spawnInverts } from './scene/fauna/inverts';
 import { createGodRays } from './scene/godrays';
 import { setupRenderer, createPostFX } from './scene/postfx';
 import { seedRng } from './lib/rng';
@@ -79,6 +80,16 @@ const fishLines: Record<string, string[]> = {
     '오늘은 모래알을 세며 쉬어가는 날.',
     '고개 숙여 바닥을 살피는 일이, 실은 가장 멀리 보는 길일지도.',
     '느린 게 게으른 건 아니야. 그저 꼼꼼할 뿐이지.',
+  ],
+  shrimp: [
+    '이끼는 아무리 먹어도 줄지 않아. 그래서 마음이 놓여.',
+    '작고 투명해도, 이 수조를 닦는 건 나야.',
+    '아무도 안 보는 구석부터 깨끗해지는 게 좋아.',
+  ],
+  snail: [
+    '느려도 결국 닿아. 서두를 이유가 없지.',
+    '유리벽 너머의 세상도, 천천히 구경하는 중이야.',
+    '집을 늘 지고 다니니, 어디든 내 자리가 돼.',
   ],
 };
 
@@ -254,6 +265,7 @@ function init(): void {
   const lighting = new Lighting(scene, tankHeight);
   const aquascape = buildAquascape(scene);
   const fishList = spawnFauna(scene);
+  const inverts = spawnInverts(scene); // §5 새우·달팽이(저서 무척추)
   createGodRays(scene); // 상단 광원에서 떨어지는 미세한 빛줄기(정적)
 
   // 시네마틱 포스트프로세싱(은은한 Bloom + DoF + 톤매핑 마감). 캡처·일반 경로 공통.
@@ -287,6 +299,7 @@ function init(): void {
         animatePlants(aquascape.animatedPlants, time);
         animateBubbles(aquascape.bubbles, delta, time);
         fishList.forEach((fish) => fish.update(delta, time, fishList));
+        inverts.forEach((c) => c.update(delta, time));
         postfx.render();
       };
       renderClip();
@@ -302,6 +315,7 @@ function init(): void {
       animatePlants(aquascape.animatedPlants, t);
       animateBubbles(aquascape.bubbles, CAPTURE_FIXED_DELTA, t);
       fishList.forEach((fish) => fish.update(CAPTURE_FIXED_DELTA, t, fishList));
+      inverts.forEach((c) => c.update(CAPTURE_FIXED_DELTA, t));
     }
     postfx.render();
     window.__captureReady = true;
@@ -312,8 +326,11 @@ function init(): void {
   // 시작 시 현재 창 비율에 맞춰 프레이밍(가로/세로 대응).
   frameCamera(camera, window.innerWidth / window.innerHeight);
 
-  // 클릭 대상은 물고기뿐 — 클릭하면 그 물고기의 작은 대사를 보여준다.
-  const fishObjects: THREE.Object3D[] = fishList.map((f) => f.group);
+  // 클릭 대상은 물고기 + 무척추 — 클릭하면 그 생물의 작은 대사를 보여준다.
+  const fishObjects: THREE.Object3D[] = [
+    ...fishList.map((f) => f.group),
+    ...inverts.map((c) => c.group),
+  ];
 
   setLightMode(lighting, 'day', false);
   // 저장된 조명 모드 복원(없으면 day 유지). 비-Tauri 환경은 조용히 무시.
@@ -518,6 +535,7 @@ function init(): void {
     animatePlants(aquascape.animatedPlants, time);
     animateBubbles(aquascape.bubbles, delta, time);
     fishList.forEach((fish) => fish.update(delta, time, fishList, currentMood.fishSpeedMul));
+    inverts.forEach((c) => c.update(delta, time));
     updateFishLinePosition(camera); // 대사 말풍선이 물고기 머리 위를 따라다닌다
 
     postfx.render();
