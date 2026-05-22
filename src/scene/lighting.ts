@@ -109,6 +109,8 @@ export class Lighting {
   private causticIntensity = 0.55;
 
   mode: LightMode = 'day';
+  /** §6-2 사용량 연동 — 포그 밀도 배수(한도 임박 시 물을 탁하게). 렌더 루프가 설정한다. */
+  fogDensityMul = 1;
   private target: TargetLightSettings | null = null;
 
   constructor(scene: THREE.Scene, tankHeight: number) {
@@ -203,7 +205,7 @@ export class Lighting {
 
     if (scene.fog instanceof THREE.FogExp2) {
       scene.fog.color.lerp(t.fogColor, lerpSpeed);
-      scene.fog.density = THREE.MathUtils.lerp(scene.fog.density, t.fogDensity, lerpSpeed);
+      scene.fog.density = THREE.MathUtils.lerp(scene.fog.density, t.fogDensity * this.fogDensityMul, lerpSpeed);
     }
 
     const clear = renderer.getClearColor(new THREE.Color());

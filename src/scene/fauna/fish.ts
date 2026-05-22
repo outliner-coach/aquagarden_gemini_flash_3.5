@@ -190,7 +190,7 @@ export class Fish {
     this.currentSpeed = this.baseSpeed * (0.8 + random() * 0.5);
   }
 
-  update(delta: number, time: number, flock?: Fish[]): void {
+  update(delta: number, time: number, flock?: Fish[], speedMul = 1): void {
     const distanceToTarget = this.position.distanceTo(this.target);
     if (distanceToTarget < 2.0) {
       this.pickNewTarget();
@@ -234,7 +234,7 @@ export class Fish {
     this.group.rotation.z = THREE.MathUtils.lerp(this.group.rotation.z, pitch, 0.05);
 
     // 위치 전진
-    this.velocity.copy(dir).multiplyScalar(this.currentSpeed);
+    this.velocity.copy(dir).multiplyScalar(this.currentSpeed * speedMul);
     this.position.addScaledVector(this.velocity, delta);
     this.group.position.copy(this.position);
 

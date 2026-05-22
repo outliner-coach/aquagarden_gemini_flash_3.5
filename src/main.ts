@@ -9,6 +9,7 @@ import { seedRng } from './lib/rng';
 import { cameraPresets, type CameraName } from './scene/cameraPresets';
 import { deriveFraming, maxCoverDistance, targetYForDistance, MIN_DISTANCE } from './scene/framing';
 import { createUsageStore, startUsageSubscription } from './usage/store';
+import { usageMood, type SceneMood } from './scene/mood';
 import { mountHud } from './hud';
 import { mountMenu } from './menu';
 import {
@@ -385,6 +386,13 @@ function init(): void {
   mountHud(usageStore);
   void startUsageSubscription(usageStore);
 
+  // §6-2 어항↔사용량 연동 — 컨텍스트 점유율이 오르면 물이 탁해지고 물고기가 둔해진다.
+  // 라이브 루프만 반영(캡처 경로는 고정 스냅샷·CALM 유지).
+  let currentMood: SceneMood = usageMood(null);
+  usageStore.subscribe(() => {
+    currentMood = usageMood(usageStore.snapshot?.context_pct ?? null);
+  });
+
   // 조명 버튼 배선
   (['day', 'dusk', 'night'] as const).forEach((m) => {
     getEl(`btn-${m}`)?.addEventListener('click', () => setLightMode(lighting, m));
@@ -505,10 +513,11 @@ function init(): void {
     simTime += delta;
     const time = simTime;
 
+    lighting.fogDensityMul = currentMood.fogDensityMul; // §6-2 사용량 연동
     lighting.update(renderer, scene, time);
     animatePlants(aquascape.animatedPlants, time);
     animateBubbles(aquascape.bubbles, delta, time);
-    fishList.forEach((fish) => fish.update(delta, time, fishList));
+    fishList.forEach((fish) => fish.update(delta, time, fishList, currentMood.fishSpeedMul));
     updateFishLinePosition(camera); // 대사 말풍선이 물고기 머리 위를 따라다닌다
 
     postfx.render();
