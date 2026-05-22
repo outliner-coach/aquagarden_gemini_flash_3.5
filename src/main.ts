@@ -62,16 +62,22 @@ const fishLines: Record<string, string[]> = {
     '천천히 헤엄쳐도 괜찮아. 물은 어디로도 도망가지 않으니까.',
     '혼자라는 건 외로움이 아니라, 나를 가만히 들여다보는 시간이야.',
     '지느러미를 활짝 펴는 데엔 이유가 없어. 그저 오늘이 좋아서.',
+    '거울 속 나를 보고 한껏 부풀려 본다. 겁이 아니라, 살아있다는 인사야.',
+    '흐르는 물에 몸을 맡기는 법을 익히는 데 한평생이 걸렸어.',
   ],
   tetra: [
     '함께 헤엄치면, 무서운 것도 조금은 작아져.',
     '작은 빛이라도 모이면 강이 되는걸.',
     '서두르지 않아도 돼. 다 같이 가면 되니까.',
+    '무리에서 한 박자 늦어도, 아무도 나를 탓하지 않아.',
+    '반짝임은 비늘이 아니라 함께 있다는 마음에서 나와.',
   ],
   corydoras: [
     '바닥에도 볕은 들어. 천천히 살아도 충분해.',
     '남이 보지 않는 곳을 돌보는 일에도 조용한 기쁨이 있어.',
     '오늘은 모래알을 세며 쉬어가는 날.',
+    '고개 숙여 바닥을 살피는 일이, 실은 가장 멀리 보는 길일지도.',
+    '느린 게 게으른 건 아니야. 그저 꼼꼼할 뿐이지.',
   ],
 };
 
@@ -101,7 +107,7 @@ function triggerFishLine(type: string, group: THREE.Object3D): void {
 
   // 잠시 보였다 조용히 사라진다(상주 chrome 최소화).
   window.clearTimeout(fishLineTimer);
-  fishLineTimer = window.setTimeout(() => closeFishLine(), 6000);
+  fishLineTimer = window.setTimeout(() => closeFishLine(), 8000); // §4-2: 6s→8s (읽을 여유)
 }
 
 function closeFishLine(): void {

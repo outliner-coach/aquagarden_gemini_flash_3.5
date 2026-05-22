@@ -12,6 +12,17 @@ export interface HudView {
   gaugeWidth: number;
   /** 컨텍스트 토큰 수치 라벨(천단위 구분 또는 "—"). */
   tokensLabel: string;
+  /** 점유율 단계 — HUD 바 색상·임박 강조(§6-3). 데이터/한도 미상이면 'normal'. */
+  level: GaugeLevel;
+}
+
+export type GaugeLevel = 'normal' | 'warn' | 'critical';
+
+/** 점유율(%) → 단계. 75% 경고, 90% 임박. */
+function gaugeLevel(pct: number): GaugeLevel {
+  if (pct >= 90) return 'critical';
+  if (pct >= 75) return 'warn';
+  return 'normal';
 }
 
 const EMPTY: HudView = {
@@ -19,6 +30,7 @@ const EMPTY: HudView = {
   contextLabel: '—',
   gaugeWidth: 0,
   tokensLabel: '—',
+  level: 'normal',
 };
 
 function clampPct(pct: number): number {
@@ -46,13 +58,15 @@ export function deriveHudView(snapshot: UsageSnapshot | null): HudView {
   const tokensLabel = formatTokens(snapshot.context_tokens);
   const pct = snapshot.context_pct;
   if (pct === null || !Number.isFinite(pct)) {
-    return { hasData: true, contextLabel: '—', gaugeWidth: 0, tokensLabel };
+    return { hasData: true, contextLabel: '—', gaugeWidth: 0, tokensLabel, level: 'normal' };
   }
 
+  const gaugeWidth = clampPct(pct);
   return {
     hasData: true,
     contextLabel: `${pct.toFixed(1)}%`,
-    gaugeWidth: clampPct(pct),
+    gaugeWidth,
     tokensLabel,
+    level: gaugeLevel(gaugeWidth),
   };
 }
