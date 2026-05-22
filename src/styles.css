@@ -103,3 +103,8 @@ body.collapsed .resize-grip {
 body.collapsed #puck {
   display: flex;
 }
+
+/* §4-5 투과모드 활성 시 ⋯ 트리거 에메랄드 글로우 */
+#menu-button.menu-passthrough-on {
+  filter: drop-shadow(0 0 5px rgb(52 211 153 / 0.75));
+}

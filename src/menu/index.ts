@@ -164,6 +164,10 @@ export function mountMenu(opts: MenuOptions): MenuController {
       passthroughState.classList.toggle('border-emerald-400/40', passthroughOn);
       passthroughState.classList.toggle('text-slate-500', !passthroughOn);
     }
+    // §4-5: 투과 활성 시 ⋯ 트리거를 에메랄드로 빛나게 — 투과/입력수신 상태를 한눈에 구분.
+    menuButton.classList.toggle('text-emerald-400', passthroughOn);
+    menuButton.classList.toggle('menu-passthrough-on', passthroughOn);
+    menuButton.classList.toggle('text-slate-300', !passthroughOn);
     opts.onPassthrough(passthroughOn);
     if (passthroughOn) dispatch('POINTER_ACTIVITY'); // ⋯ 를 띄워 둔다.
     else render();

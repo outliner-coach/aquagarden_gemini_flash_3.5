@@ -341,12 +341,37 @@ function init(): void {
     reportHole: (x, y, w, h) => void updatePassthroughHole(x, y, w, h),
   });
 
-  // 접힌 ⋯ 퍽 클릭 → 어항 복귀.
-  getEl('puck')?.addEventListener('click', () => {
-    document.body.classList.remove('collapsed');
-    syncRenderLoop(); // 복귀 → 렌더 재개(§7)
-    void restoreWindow();
-  });
+  // 접힌 ⋯ 퍽: 단순 클릭 → 어항 복귀, 5px 이상 드래그 → 퍽째로 창 이동(§4-6).
+  const puckEl = getEl('puck');
+  if (puckEl) {
+    let puckDownAt: { x: number; y: number } | null = null;
+    let puckDragging = false;
+    puckEl.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      puckDownAt = { x: event.clientX, y: event.clientY };
+      puckDragging = false;
+    });
+    puckEl.addEventListener('pointermove', (event) => {
+      if (!puckDownAt || puckDragging) return;
+      if (Math.hypot(event.clientX - puckDownAt.x, event.clientY - puckDownAt.y) >= DRAG_THRESHOLD) {
+        puckDragging = true;
+        void startWindowDrag(); // OS가 창(퍽) 이동을 인계받는다.
+      }
+    });
+    puckEl.addEventListener('pointerup', () => {
+      const wasDrag = puckDragging;
+      puckDownAt = null;
+      puckDragging = false;
+      if (wasDrag) return; // 드래그였으면 복귀하지 않는다.
+      document.body.classList.remove('collapsed');
+      syncRenderLoop(); // 복귀 → 렌더 재개(§7)
+      void restoreWindow();
+    });
+    puckEl.addEventListener('pointercancel', () => {
+      puckDownAt = null; // OS 드래그 인계/취소 시 상태 정리
+      puckDragging = false;
+    });
+  }
 
   // 사용량 HUD — Rust(usage.rs)의 'usage://snapshot' 이벤트만 구독한다(FS 접근 없음).
   // 구독 시작 실패(비-Tauri 환경)는 무시 — 어항은 멈추지 않는다.
@@ -405,7 +430,7 @@ function init(): void {
     const wasDrag = dragging;
     downAt = null;
     dragging = false;
-    if (!started || wasDrag || event.button !== 0) return;
+    if (!started || wasDrag || event.button !== 0 || event.detail > 1) return; // 더블클릭(줌 리셋) 2번째+ 클릭은 raycast 스킵
     if (!onBackground(event.target as HTMLElement | null)) return;
 
     // 단순 클릭 → 물고기 raycast.
@@ -442,6 +467,14 @@ function init(): void {
     },
     { passive: false },
   );
+
+  // 더블클릭(배경) = 줌 리셋 → 자동 반응형 프레이밍 거리로 복귀(§4-1).
+  window.addEventListener('dblclick', (event) => {
+    if (!onBackground(event.target as HTMLElement | null)) return;
+    if (zoomDistance == null) return; // 이미 자동 거리면 무시
+    zoomDistance = null;
+    frameCamera(camera, window.innerWidth / window.innerHeight);
+  });
 
   // Resize — 비율 갱신 + 반응형 재프레이밍(가로/세로 대응).
   window.addEventListener('resize', () => {
