@@ -1,0 +1,8 @@
+{
+  "project": "Aquagarden",
+  "phase": "1-aesthetic",
+  "steps": [
+    { "step": 0, "name": "aesthetic-rubric", "status": "pending" },
+    { "step": 1, "name": "subtraction-pass", "status": "pending" }
+  ]
+}
