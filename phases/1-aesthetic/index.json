@@ -7,7 +7,8 @@
       "name": "aesthetic-rubric",
       "status": "completed",
       "summary": "AESTHETIC.md 감산 루브릭 갱신(§1 무드·§2 팔레트 상한·§5 Fail조건) + 캡처 스크립트 CAPTURE_PHASE/CAPTURE_STEP 파라미터화",
-      "started_at": "2026-05-22T15:00:56+0900"
+      "started_at": "2026-05-22T15:00:56+0900",
+      "completed_at": "2026-05-22T15:04:03+0900"
     },
     {
       "step": 1,
