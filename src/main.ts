@@ -1,7 +1,7 @@
 import './styles.css';
 import * as THREE from 'three';
 import { buildAquascape, animatePlants, animateBubbles, tankHeight } from './scene/aquascape';
-import { Lighting, colors, type LightMode } from './scene/lighting';
+import { Lighting, colors, transparentClearAlpha, type LightMode } from './scene/lighting';
 import { spawnFauna } from './scene/fauna/fish';
 import { spawnInverts } from './scene/fauna/inverts';
 import { createGodRays } from './scene/godrays';
@@ -253,12 +253,17 @@ function init(): void {
   camera.position.set(0, 3, 22);
 
   // Renderer
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    alpha: true,
+    antialias: true,
+    powerPreference: 'high-performance',
+  });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(colors.day.bg);
+  renderer.setClearColor(colors.day.bg, transparentClearAlpha);
   setupRenderer(renderer); // 시네마틱 색관리(ACESFilmic 톤매핑 + sRGB)
 
   // Lighting / scene contents

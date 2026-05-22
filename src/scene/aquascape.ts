@@ -9,6 +9,30 @@ export const tankWidth = 24;
 export const tankHeight = 14;
 export const tankDepth = 11;
 
+export const aquariumMaterialPresets = {
+  glass: {
+    opacity: 0.035,
+    roughness: 0.04,
+    metalness: 0.05,
+    transmission: 0.82,
+    ior: 1.5,
+  },
+  waterSurface: {
+    opacity: 0.075,
+    roughness: 0.04,
+    metalness: 0.55,
+    transmission: 0.94,
+    ior: 1.33,
+  },
+  bubbles: {
+    opacity: 0.78,
+    roughness: 0.0,
+    metalness: 0.08,
+    transmission: 0.95,
+    ior: 1.1,
+  },
+} as const;
+
 export interface PlantSway {
   nodes: THREE.Object3D[];
   // 흐름장(flow field) 기반 흔들림 — 위상은 월드 좌표에서 유도(공유 흐름), per-plant 독립 사인파 금지.
@@ -188,11 +212,11 @@ function spawnBubbles(scene: THREE.Scene, bubbles: THREE.Mesh[], count: number):
   const bubbleMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     transparent: true,
-    opacity: 0.45,
-    roughness: 0.0,
-    metalness: 0.1,
-    transmission: 0.9,
-    ior: 1.1,
+    opacity: aquariumMaterialPresets.bubbles.opacity,
+    roughness: aquariumMaterialPresets.bubbles.roughness,
+    metalness: aquariumMaterialPresets.bubbles.metalness,
+    transmission: aquariumMaterialPresets.bubbles.transmission,
+    ior: aquariumMaterialPresets.bubbles.ior,
   });
 
   for (let i = 0; i < count; i++) {
@@ -213,11 +237,11 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
   const glassMat = new THREE.MeshPhysicalMaterial({
     color: 0xe0f7fa,
     transparent: true,
-    opacity: 0.08,
-    roughness: 0.1,
-    metalness: 0.1,
-    transmission: 0.6,
-    ior: 1.5,
+    opacity: aquariumMaterialPresets.glass.opacity,
+    roughness: aquariumMaterialPresets.glass.roughness,
+    metalness: aquariumMaterialPresets.glass.metalness,
+    transmission: aquariumMaterialPresets.glass.transmission,
+    ior: aquariumMaterialPresets.glass.ior,
     side: THREE.BackSide,
   });
   scene.add(new THREE.Mesh(glassGeo, glassMat));
@@ -257,13 +281,13 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
   const waterGeo = new THREE.PlaneGeometry(tankWidth, tankDepth, 30, 20);
   waterGeo.rotateX(-Math.PI / 2);
   const waterMat = new THREE.MeshPhysicalMaterial({
-    color: 0x33e0ff,
+    color: 0x9eefff,
     transparent: true,
-    opacity: 0.25,
-    roughness: 0.1,
-    metalness: 0.8,
-    transmission: 0.8,
-    ior: 1.33,
+    opacity: aquariumMaterialPresets.waterSurface.opacity,
+    roughness: aquariumMaterialPresets.waterSurface.roughness,
+    metalness: aquariumMaterialPresets.waterSurface.metalness,
+    transmission: aquariumMaterialPresets.waterSurface.transmission,
+    ior: aquariumMaterialPresets.waterSurface.ior,
     side: THREE.DoubleSide,
   });
   const waterMesh = new THREE.Mesh(waterGeo, waterMat);

@@ -40,12 +40,15 @@ export const colors: Record<LightMode, ColorTheme> = {
   },
 };
 
+export const transparentClearAlpha = 0;
+
 export interface TargetLightSettings {
   ambientColor: THREE.Color;
   dirColor: THREE.Color;
   topColor: THREE.Color;
   fogColor: THREE.Color;
   bgColor: THREE.Color;
+  clearAlpha: number;
   ambientIntensity: number;
   dirIntensity: number;
   topIntensity: number;
@@ -61,11 +64,12 @@ export function targetLightSettingsForMode(mode: LightMode): TargetLightSettings
     topColor: new THREE.Color(theme.topLight),
     fogColor: new THREE.Color(theme.fog),
     bgColor: new THREE.Color(theme.bg),
+    clearAlpha: transparentClearAlpha,
     ambientIntensity: mode === 'day' ? 1.12 : mode === 'dusk' ? 0.86 : 0.68,
     dirIntensity: mode === 'day' ? 1.18 : mode === 'dusk' ? 0.65 : 0.35,
     topIntensity: mode === 'day' ? 4.8 : mode === 'dusk' ? 3.6 : 4.6,
-    fogDensity: mode === 'day' ? 0.036 : mode === 'dusk' ? 0.038 : 0.044,
-    causticIntensity: mode === 'day' ? 0.52 : mode === 'dusk' ? 0.3 : 0.34,
+    fogDensity: mode === 'day' ? 0.018 : mode === 'dusk' ? 0.024 : 0.03,
+    causticIntensity: mode === 'day' ? 0.62 : mode === 'dusk' ? 0.42 : 0.4,
   };
 }
 
@@ -207,7 +211,7 @@ export class Lighting {
     }
 
     const clear = renderer.getClearColor(new THREE.Color());
-    renderer.setClearColor(clear.lerp(t.bgColor, lerpSpeed));
+    renderer.setClearColor(clear.lerp(t.bgColor, lerpSpeed), t.clearAlpha);
 
     this.ambient.intensity = THREE.MathUtils.lerp(this.ambient.intensity, t.ambientIntensity, lerpSpeed);
     this.directional.intensity = THREE.MathUtils.lerp(this.directional.intensity, t.dirIntensity, lerpSpeed);

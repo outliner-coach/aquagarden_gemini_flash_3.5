@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { bloomDefaults, gradeDefaults, toneMappingExposure } from './postfx';
+import { bloomDefaults, gradeDefaults, gradeFragmentShader, toneMappingExposure } from './postfx';
 
 describe('postfx clarity presets', () => {
-  it('비네팅과 그레인은 물멍 화면을 흐리지 않도록 낮게 유지한다', () => {
+  it('비네팅과 그레인은 투명 위젯 가장자리에 어두운 사각형을 만들지 않도록 낮게 유지한다', () => {
     expect(gradeDefaults).toEqual({
-      vignette: 0.15,
-      grain: 0.006,
-      saturation: 1.12,
+      vignette: 0.06,
+      grain: 0.003,
+      saturation: 1.08,
       warm: 0.0,
     });
+  });
+
+  it('grade shader는 렌더 타깃 alpha를 그대로 보존한다', () => {
+    expect(gradeFragmentShader).toContain('gl_FragColor = vec4(clamp(c.rgb, 0.0, 1.0), c.a);');
   });
 
   it('Bloom은 발광 요소만 은은하게 잡는 값으로 제한한다', () => {

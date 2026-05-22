@@ -16,9 +16,9 @@ export interface PostFX {
 }
 
 export const gradeDefaults = {
-  vignette: 0.15,
-  grain: 0.006,
-  saturation: 1.12,
+  vignette: 0.06,
+  grain: 0.003,
+  saturation: 1.08,
   warm: 0.0,
 };
 
@@ -29,6 +29,40 @@ export const bloomDefaults = {
 };
 
 export const toneMappingExposure = 1.08;
+
+export const gradeFragmentShader = /* glsl */ `
+  uniform sampler2D tDiffuse;
+  uniform float uFrame;
+  uniform float uVignette;
+  uniform float uGrain;
+  uniform float uSaturation;
+  uniform float uWarm;
+  varying vec2 vUv;
+
+  void main() {
+    vec4 c = texture2D(tDiffuse, vUv);
+
+    // 채도 — 녹색 위주로 살짝 끌어올려 무성함을 강조(luma 보존).
+    float luma = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+    c.rgb = mix(vec3(luma), c.rgb, uSaturation);
+
+    // 따뜻한 톤 시프트 — 적·녹을 살짝 올리고 청을 살짝 내려 데모틸의 차가움을 상쇄.
+    c.r += uWarm;
+    c.g += uWarm * 0.5;
+    c.b -= uWarm * 0.7;
+
+    // 비네팅 — 가장자리를 부드럽게 어둡게.
+    vec2 q = vUv - 0.5;
+    float vig = smoothstep(0.9, 0.25, length(q));
+    c.rgb *= mix(1.0, vig, uVignette);
+
+    // 그레인 + 디더 — 밴딩을 깨는 미세 노이즈(프레임마다 변주).
+    float n = fract(sin(dot(vUv * 1024.0 + uFrame, vec2(12.9898, 78.233))) * 43758.5453);
+    c.rgb += (n - 0.5) * uGrain;
+
+    gl_FragColor = vec4(clamp(c.rgb, 0.0, 1.0), c.a);
+  }
+`;
 
 // 사진적 마감 셰이더 — 비네팅, 미세 그레인, 디더. tDiffuse는 sRGB(OutputPass 이후).
 const GradeShader = {
@@ -47,39 +81,7 @@ const GradeShader = {
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
   `,
-  fragmentShader: /* glsl */ `
-    uniform sampler2D tDiffuse;
-    uniform float uFrame;
-    uniform float uVignette;
-    uniform float uGrain;
-    uniform float uSaturation;
-    uniform float uWarm;
-    varying vec2 vUv;
-
-    void main() {
-      vec4 c = texture2D(tDiffuse, vUv);
-
-      // 채도 — 녹색 위주로 살짝 끌어올려 무성함을 강조(luma 보존).
-      float luma = dot(c.rgb, vec3(0.299, 0.587, 0.114));
-      c.rgb = mix(vec3(luma), c.rgb, uSaturation);
-
-      // 따뜻한 톤 시프트 — 적·녹을 살짝 올리고 청을 살짝 내려 데모틸의 차가움을 상쇄.
-      c.r += uWarm;
-      c.g += uWarm * 0.5;
-      c.b -= uWarm * 0.7;
-
-      // 비네팅 — 가장자리를 부드럽게 어둡게.
-      vec2 q = vUv - 0.5;
-      float vig = smoothstep(0.9, 0.25, length(q));
-      c.rgb *= mix(1.0, vig, uVignette);
-
-      // 그레인 + 디더 — 밴딩을 깨는 미세 노이즈(프레임마다 변주).
-      float n = fract(sin(dot(vUv * 1024.0 + uFrame, vec2(12.9898, 78.233))) * 43758.5453);
-      c.rgb += (n - 0.5) * uGrain;
-
-      gl_FragColor = clamp(c, 0.0, 1.0);
-    }
-  `,
+  fragmentShader: gradeFragmentShader,
 };
 
 // 렌더러를 시네마틱 색관리로 설정한다. 톤매핑/색공간 변환은 OutputPass가 마지막에 수행하므로
