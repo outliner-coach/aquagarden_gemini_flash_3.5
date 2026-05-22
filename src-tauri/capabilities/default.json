@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Aquagarden 최소 권한 — 위젯 기본 동작 + 설정 영속화만. ~/.claude 사용량 읽기는 Rust(usage.rs std::fs)에서만 처리하므로 웹뷰 fs 권한을 부여하지 않는다(읽기 전용 + 호출자 경로 인자 없음, ADR-008·CLAUDE.md). 설정 쓰기는 store 플러그인이 앱 config 디렉토리로 한정.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "store:default"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "project": "Aquagarden",
+  "phase": "0-mvp",
+  "steps": [
+    {
+      "step": 0,
+      "name": "spikes",
+      "status": "completed",
+      "started_at": "2026-05-21T17:06:53+0900",
+      "completed_at": "2026-05-21T17:09:05+0900",
+      "summary": "검증 완료(사용자 수치 대조 OK). scripts/spike_usage.py: ~/.claude/projects/**/*.jsonl 파싱 → 컨텍스트점유 = 최신 assistant 메시지의 input+cache_creation+cache_read, model→한도 매핑(claude-opus-4-7=1,000,000), 현재 세션 21.6%. haiku는 한도 미매핑(v2에서 200K 정밀화). Tauri(phases/0-mvp/spike-tauri.md): macOS는 transparent에 macOSPrivateApi:true 필수(App Store 불가, 로컬배포라 무관), skipTaskbar 미지원 → main.rs에서 ActivationPolicy::Accessory로 Dock 숨김, setIgnoreCursorEvents(클릭통과)·tray-icon·tauri-plugin-store 사용가능. spike-tauri.md에 tauri.conf.json 창블록+CSP(connect-src 'none') 초안 포함 — step1에서 사용."
+    },
+    {
+      "step": 1,
+      "name": "tauri-vite-setup",
+      "status": "completed",
+      "started_at": "2026-05-21T17:35:30+0900",
+      "completed_at": "2026-05-21T17:45:56+0900",
+      "summary": "Tauri v2 + Vite + TS(strict) 스캐폴드. AC 전부 통과(npm run lint/build, cargo check, tsc --noEmit, vitest). 프론트: Vite6+TS strict, Tailwind v3 npm+PostCSS(CDN 0), ESLint9 flat+typescript-eslint, vitest(--passWithNoTests). 진입점 src/main.ts(스텁), src/window/(setClickThrough→invoke), src/settings/(plugin-store load 래퍼 스텁). Rust: src-tauri lib/main 분리, tauri.conf.json 단일 창블록(transparent·alwaysOnTop·decorations:false·skipTaskbar·shadow:false·480x320, macOSPrivateApi:true), CSP connect-src 'none'(+default/script/img/style 'self', style unsafe-inline), updater 미설정+createUpdaterArtifacts:false. tray.rs(표시·숨김/설정placeholder/종료, default_window_icon 템플릿), window.rs(set_click_through command, 기본 입력수신), lib.rs setup서 macOS ActivationPolicy::Accessory로 Dock 숨김+tauri-plugin-store 등록. capabilities/default.json은 core:default+store:default만(fs/http/shell 없음, ~/.claude 읽기는 step5). 기존 프로토타입 index.html→prototype.html로 보존(step2 이식 원본; Vite 기본 진입은 새 index.html). 아이콘은 sample.jpeg→PIL로 RGBA PNG/icns 생성(Tauri codegen RGBA 필수). 투명·always-on-top·프레임리스 창+트레이 표시는 GUI(npm run dev) 수동 확인 대상. 환경: rustup으로 Rust 1.95 stable 설치함."
+    },
+    {
+      "step": 2,
+      "name": "scene-port",
+      "status": "completed",
+      "started_at": "2026-05-21T17:45:56+0900",
+      "completed_at": "2026-05-21T18:00:41+0900",
+      "summary": "prototype.html 인라인 스크립트를 ESM 모듈로 외과적 이식(동작 보존). npm three@0.184(+@types/three) — CDN r128 제거. src/scene/aquascape.ts(buildAquascape→유리/모래/소일/수면/바위8/유목/오리/수초110/기포70, animatePlants·animateBubbles export, tankW/H/D 상수), src/scene/lighting.ts(Lighting 클래스: ambient/dir/spot + colors 팔레트 + setMode/update 보간), src/scene/fauna/fish.ts(Fish 클래스 betta/tetra/corydoras boids타겟추적·꼬리흔들기 + spawnFauna, 공통 group/update). main.ts가 scene/camera/renderer/OrbitControls 초기화+animate 루프+raycast 클릭명언(quotes 데이터·triggerQuote)+조명버튼 배선. r128→0.184 API 변경은 OrbitControls 임포트(three/addons/...)만 — 색공간 등 기본값 유지(미화는 step4). index.html에 canvas+오버레이(로딩/조명셀렉터/명언카드/가이드/생물사전) 이식, FontAwesome·GoogleFonts·Tailwind CDN 전부 제거(아이콘은 텍스트/✕로 대체). styles.css의 .glassmorphism은 backdrop-filter:blur 제거(CLAUDE.md 안티슬롭 준수, 단색 반투명만). 검증: tsc/lint/build/test 전부 통과 + 헤드리스(playwright preview)로 씬 렌더·물고기3종·수초·기포·낮↔밤 조명전환·유목 클릭명언 동작 확인(런타임 에러 0, favicon 404만). 미화/포스트프로세싱 미추가."
+    },
+    {
+      "step": 3,
+      "name": "visual-harness",
+      "status": "completed",
+      "started_at": "2026-05-21T18:00:41+0900",
+      "completed_at": "2026-05-21T18:10:37+0900",
+      "summary": "결정론적 캡처 인프라(시각 변경 0). src/lib/rng.ts: 시드 가능한 mulberry32 PRNG(random/seedRng), 기본 Date.now() 시드라 일반 실행은 기존 랜덤 동작 보존 — aquascape.ts·fish.ts의 Math.random 전부 random()으로 치환(난수 그리기 순서 고정→결정론). rng.test.ts 4케이스(동일시드 동일시퀀스·다른시드 차이·[0,1)범위·시드0). src/scene/cameraPresets.ts: front/driftwood/foreground 3프리셋(position+target). main.ts에 캡처 모드 추가 — ?capture=1&seed=&camera=&mode=&clip= URL파라미터로 구동: 씬 빌드 전 seedRng→고정카메라(OrbitControls 미생성)→hideChrome(loading제거+ui-overlay 숨김, index.html에 id 추가)→정지프레임은 고정 Δ(1/60)×300스텝 워밍업(조명 lerp 정착+모션진행) 후 1회 렌더+window.__captureReady=true(rAF·입력 없음), clip은 실시간 rAF. 일반 실행 경로는 기존 그대로. scripts/capture.mjs(npm run capture): vite preview(dist, 4317)+playwright(시스템 Chrome channel, SwiftShader 강제로 run-to-run 결정론) 헤드리스로 1280x800, 카메라3×모드3=9장 {camera}_{mode}.png + clip_front_day.webm(best-effort) → phases/0-mvp/captures/step3/. AC: build OK, 9장 생성, 2회 실행 PNG SHA-256 전부 byte-identical(결정론 확인). 캡처는 .gitignore(phases/**/captures/)로 미커밋. playwright@1.60 devDep 추가(브라우저는 시스템 캐시/Chrome 사용, 다운로드 없음). tsc/lint/test 통과. 미학 변경 없음(step4 polish 측정도구만)."
+    },
+    {
+      "step": 4,
+      "name": "visual-polish",
+      "status": "completed",
+      "started_at": "2026-05-21T18:47:24+0900",
+      "completed_at": "2026-05-21T19:13:42+0900",
+      "summary": "게이트1 보강 피드백 7항목 반영 후 시네마틱 룩을 sample.jpeg(따뜻·무성한 네이처 아쿠아리움) 무드로 끌어올림. (1)무드 그레이딩: lighting day 팔레트를 차가운 청록→따뜻한 황록(fog 0x274320·ambient 0xe2e6bc·warm 햇빛)으로, postfx GradeShader에 채도(1.27)+따뜻함(0.085) 시프트 추가. (2)코스틱: SpotLight.map 투영이 소프트웨어GL(캡처)서 약해 별도 가산 코스틱 오버레이 평면(바닥 위 y≈-4.65)을 추가—도메인워프 절차 텍스처(체스판 격자 제거, 유기적 광망)·off-axis 회전·모드별 강도(day 0.48). (3)Bloom: 발광/하이라이트가 실제 보이되 비대 헤일로 회피(strength 0.5·radius 0.45·threshold 0.72), 네온테트라 스트라이프는 소스 색을 채도 낮춘 청록(0x0a5560/emissive 0x12727d, intensity 1.05)으로 낮춰 sheen만 글로우. (4)식재 밀도+이끼: 수초 142→226주(좌녹78·중46·우적62·전경카펫40)+중경 모스 덩어리 22+돌마다 모스 클럼프 2~4개, 색 변주는 좁혀 형광 라임 아웃라이어 제거. (5)머티리얼 디테일: 바위를 갈색 블록→회녹 세이류석(0x7d847a)+층상(strata) 절차 변형+디테일레벨↑. (6)DoF: BokehPass focus 21·aperture 0.0016·maxblur 0.014로 전경/배경만 은은히 보케(매크로 감성). (7)베타 스케일 0.85→0.68 축소. 모션: 테트라 boids 응집↓(0.32)·분리↑(0.55,반경3.2)로 균일 에셜론→느슨한 군집. 갓레이는 기존 5줄기 유지. 신규/수정: postfx.ts·godrays.ts·lighting.ts(팔레트+코스틱오버레이)·aquascape.ts(밀도+모스+회녹암석)·fish.ts(군영+발광+베타). capture.mjs에 실 GPU 검증샷(gpu_front_day.png, SwiftShader 강제 해제 경로) 추가. 검증: tsc/lint/build/test(4/4) 통과, 9장(카메라3×조명3)+clip+gpu샷 산출. 게이트1: designer 에이전트 루브릭 리뷰 3라운드 반복(코스틱 격자→유기, 발광 헤일로→sheen 자가교정) 끝에 §5 이진 8항목 전부 PASS. 성능(루브릭9·60초 물멍 스터터)·최종 미감은 게이트2 사용자 GUI 확인 권장(npm run dev). 게이트2 사용자 사인오프 승인됨(2026-05-21)."
+    },
+    {
+      "step": 5,
+      "name": "usage-core-basic",
+      "status": "completed",
+      "started_at": "2026-05-21T19:30:48+0900",
+      "completed_at": "2026-05-21T19:37:38+0900",
+      "summary": "src-tauri/src/usage.rs (TDD): 로컬 Claude Code 세션에서 현재 세션 컨텍스트%·토큰만 안전하게 읽어 숫자로만 emit. parse_session_file(path)→UsageSnapshot{context_tokens=최신 assistant의 input+cache_creation+cache_read, context_limit:Option(claude-opus-4-7*=1_000_000, 그 외 None), context_pct:Option(한도 Some&&>0일 때만, 0나눗셈 가드), cumulative_output_tokens=세션 output 합, model:Option}. 세션 파일은 내부 유도(호출자 경로 인자 없음, path traversal 차단): HOME/.claude/projects에서 cwd 인코딩(영숫자 외 전부 '-') 매칭 폴더의 최신 .jsonl 우선, 없으면 전 프로젝트 최신 mtime 폴백. start_usage_polling: 백그라운드 스레드가 즉시 1회+3s 간격으로 'usage://snapshot' 이벤트 emit(lib.rs setup서 배선). 견고성: File::open 실패/UTF-8 오류/잘린 JSON 줄/usage 없는 assistant 줄/누락 필드/알 수 없는 모델/빈 디렉토리 전부 해당 줄·파일만 skip, unwrap/expect/panic 0(unwrap_or류만). 세션 못 찾으면 UsageSnapshot::empty()(model None=데이터 없음, 어항 무중단). 골든 픽스처 5종(normal/truncated/missing_fields/unknown_model/empty)+없는 파일 → tests/usage_parsing.rs 7케이스 전부 통과(cargo test), cargo check OK. capabilities/default.json: ~/.claude 읽기는 Rust std::fs에서만 처리하므로 웹뷰 fs 권한 미부여(capabilities는 webview→IPC만 게이트, std::fs는 비대상)—core:default+store:default 유지, 설명에 사유 기록. IPC 페이로드 숫자·모델 id만(메시지 본문 0). 실데이터 스모크: cwd 매칭 세션 정확 선택 확인(opus-4-7 8.2% 등). 한도 근사(롤링5h)·사용량↔어항 연동은 v2(미구현)."
+    },
+    {
+      "step": 6,
+      "name": "hud-basic",
+      "status": "completed",
+      "started_at": "2026-05-21T19:37:38+0900",
+      "summary": "사용량 HUD(곁눈질) 구현. src/types/usage.ts(Rust UsageSnapshot 1:1 IPC 타입). src/usage/store.ts: EventTarget 기반 경량 반응 스토어(createUsageStore/UsageStore.setSnapshot/subscribe) + startUsageSubscription(@tauri-apps/api/event listen 동적 import로 usage://snapshot 구독, 비-Tauri/캡처 환경은 try-catch로 무시→어항 무중단). FS 접근 없음(이벤트만 입력원). src/hud/view.ts: 순수 파생 deriveHudView(snapshot|null)→HudView + formatTokens — null/model null=데이터 없음(전부 —), 한도 미상(pct null)=토큰만 표시·게이지 —, pct 0~100 클램프. src/hud/index.ts mountHud(store): #hud-overlay DOM(컨텍스트% 게이지+토큰)을 구독 갱신, 초기 렌더는 store.snapshot=null이라 — 표시. index.html에 #hud-overlay 추가(좌상단 모서리 z-20 pointer-events-none, .glassmorphism 단색 반투명 rounded-2xl, tabular-nums, emerald 게이지, 중앙 비움; UI_GUIDE 도구표면 규율 준수—blur/글로우/보라 없음). main.ts 배선: 일반 경로는 createUsageStore→mountHud→startUsageSubscription, 캡처 경로는 hideChrome 후 고정 CAPTURE_SNAPSHOT 주입(HUD는 별도 컨테이너라 캡처에 함께 찍힘→라이트 게이트). TDD: store.test 4 + view.test 7 통과(총 15). AC: tsc/lint/build/test 통과, npm run capture로 step6 9장+clip+gpu 산출(HUD가 day/night 모두 가독·중앙 비움 확인). 한도 임박 경고색 전환은 v2 범위라 게이지는 emerald 고정. 한도 근사·사용량↔어항 연동 미구현(v2).",
+      "completed_at": "2026-05-21T19:57:59+0900"
+    }
+  ],
+  "created_at": "2026-05-21T17:06:53+0900",
+  "completed_at": "2026-05-21T19:57:59+0900"
+}

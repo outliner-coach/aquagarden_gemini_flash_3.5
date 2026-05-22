@@ -1,0 +1,36 @@
+- generic [ref=e1]:
+  - generic:
+    - banner [ref=e7]:
+      - generic [ref=e10]:
+        - heading "3D 디지털 아쿠아스케이프" [level=1] [ref=e11]
+        - paragraph [ref=e12]: 사진 기반의 자연 생태 어항
+      - generic [ref=e13]:
+        - button "맑은 낮" [active] [ref=e14] [cursor=pointer]:
+          - generic [ref=e15]: 맑은 낮
+        - button "노을빛" [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: 노을빛
+        - button "신비로운 밤" [ref=e18] [cursor=pointer]:
+          - generic [ref=e19]: 신비로운 밤
+    - generic:
+      - button "✕" [ref=e20] [cursor=pointer]
+      - generic: 우아한 베타
+      - paragraph: "\"홀로 유유히 헤엄치는 베타처럼, 고독은 외로움이 아닌 내면의 아름다움을 완성하는 시간이다.\""
+      - paragraph: "- 쇼펜하우어"
+      - paragraph: 빈 공간을 클릭하면 창이 닫힙니다
+    - contentinfo:
+      - generic [ref=e21]:
+        - generic [ref=e22]: 아쿠아리움 가이드
+        - generic [ref=e23]: 마우스 드래그 / 화면 터치로 360도 회전
+        - generic [ref=e24]: 마우스 휠 / 두 손가락 핀치로 줌인/아웃
+        - generic [ref=e25]: 물고기, 유목, 바위, 노란 오리를 클릭하여 명언 감상
+      - generic [ref=e26]:
+        - generic [ref=e27]: 수족관 생물 사전
+        - generic [ref=e28]:
+          - generic [ref=e29]: 붉은 베타 (수련자)
+          - generic [ref=e31]: 1 마리
+        - generic [ref=e32]:
+          - generic [ref=e33]: 네온테트라 (군무)
+          - generic [ref=e35]: 6 마리
+        - generic [ref=e36]:
+          - generic [ref=e37]: 코리도라스 (바닥 청소부)
+          - generic [ref=e39]: 3 마리
