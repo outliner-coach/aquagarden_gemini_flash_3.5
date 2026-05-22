@@ -5,6 +5,10 @@ dist/
 next-env.d.ts
 tsconfig.tsbuildinfo
 
+# macOS / 로컬 캡처·QA 산출물
+.DS_Store
+output/
+
 # cloned harness reference (kept on disk, not tracked — has its own .git)
 harness_framework/
 
