@@ -7,10 +7,30 @@ import { random } from '../../lib/rng';
 
 export type FishType = 'betta' | 'tetra' | 'corydoras';
 
+interface FishMotionProfile {
+  baseSpeed: number;
+  steeringLerp: number;
+  turnLerp: number;
+  tailFreq: number;
+  tailAmp: number;
+}
+
+export const fishMotionProfiles: Record<FishType, FishMotionProfile> = {
+  betta: { baseSpeed: 0.8, steeringLerp: 0.055, turnLerp: 0.035, tailFreq: 3.4, tailAmp: 0.34 },
+  tetra: { baseSpeed: 2.0, steeringLerp: 0.07, turnLerp: 0.045, tailFreq: 8.5, tailAmp: 0.22 },
+  corydoras: { baseSpeed: 1.2, steeringLerp: 0.06, turnLerp: 0.04, tailFreq: 6.5, tailAmp: 0.2 },
+};
+
+export function turnSlowdownForDot(dot: number): number {
+  const turnAmount = THREE.MathUtils.clamp((1 - dot) / 2, 0, 1);
+  return 1 - turnAmount * 0.32;
+}
+
 export class Fish {
   readonly group: THREE.Group;
   readonly type: FishType;
 
+  private readonly profile: FishMotionProfile;
   private readonly baseSpeed: number;
   private currentSpeed: number;
   private readonly scale: [number, number, number];
@@ -18,6 +38,7 @@ export class Fish {
   private readonly position: THREE.Vector3;
   private readonly target = new THREE.Vector3();
   private readonly velocity: THREE.Vector3;
+  private readonly flockSteer = new THREE.Vector3();
 
   private bodyMesh!: THREE.Mesh;
   private tailBase!: THREE.Group;
@@ -34,6 +55,7 @@ export class Fish {
     this.group = new THREE.Group();
     this.group.userData = { interactiveType: type };
 
+    this.profile = fishMotionProfiles[type];
     this.baseSpeed = baseSpeed;
     this.currentSpeed = baseSpeed;
     this.scale = scale;
@@ -130,9 +152,9 @@ export class Fish {
       // 글로우 '틴트'와 '원시 휘도'를 분리 — 채도/명도 낮춘 청록 소스 색이라
       // Bloom이 가장자리 sheen만 잡고 실루엣 전체가 네온 디스크로 타버리지 않는다.
       const stripeMat = new THREE.MeshStandardMaterial({
-        color: 0x0a5560,
-        emissive: 0x12727d,
-        emissiveIntensity: 1.05, // 네온테트라 시그니처 글로우는 은은한 청록 sheen으로
+        color: 0x0c7580,
+        emissive: 0x1aa6b0,
+        emissiveIntensity: 1.15, // 맑은 day 모드에서도 묻히지 않는 은은한 청록 sheen
         roughness: 0.2,
       });
       const stripe = new THREE.Mesh(stripeGeo, stripeMat);
@@ -203,6 +225,7 @@ export class Fish {
     if (this.type === 'tetra' && flock) {
       const center = new THREE.Vector3();
       const sep = new THREE.Vector3();
+      const rawFlockSteer = new THREE.Vector3();
       let n = 0;
       for (const other of flock) {
         if (other === this || other.type !== 'tetra') continue;
@@ -217,30 +240,41 @@ export class Fish {
       if (n > 0) {
         center.divideScalar(n);
         const cohesion = new THREE.Vector3().subVectors(center, this.position).normalize();
-        dir.addScaledVector(cohesion, 0.32);
-        dir.addScaledVector(sep, 0.55);
-        dir.normalize();
+        rawFlockSteer.addScaledVector(cohesion, 0.32);
+        rawFlockSteer.addScaledVector(sep, 0.55);
       }
+      this.flockSteer.lerp(rawFlockSteer, 0.06);
+      dir.add(this.flockSteer).normalize();
     }
 
-    // 진행 방향으로 점진 선회
-    const targetRotation = Math.atan2(-dir.z, dir.x);
-    let diff = targetRotation - this.group.rotation.y;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    this.group.rotation.y += diff * 0.04;
-
-    // 상하 피치
-    const pitch = dir.y * 0.4;
-    this.group.rotation.z = THREE.MathUtils.lerp(this.group.rotation.z, pitch, 0.05);
-
-    // 위치 전진
-    this.velocity.copy(dir).multiplyScalar(this.currentSpeed * speedMul);
+    // 위치 전진 (속도 벡터 Lerp Steering 관성 적용)
+    const currentDir = this.velocity.lengthSq() > 0.001 ? this.velocity.clone().normalize() : dir;
+    const turnSlowdown = turnSlowdownForDot(currentDir.dot(dir));
+    const targetVelocity = new THREE.Vector3()
+      .copy(dir)
+      .multiplyScalar(this.currentSpeed * speedMul * turnSlowdown);
+    this.velocity.lerp(targetVelocity, this.profile.steeringLerp);
     this.position.addScaledVector(this.velocity, delta);
     this.group.position.copy(this.position);
 
-    // 꼬리 흔들기 — 속도가 빠른 종일수록 빠르게
-    const wagFreq = this.type === 'tetra' ? 14 : this.type === 'betta' ? 5 : 11;
-    const wagAmp = this.type === 'betta' ? 0.4 : 0.25;
+    // 실제 이동 방향(velocity)의 각도와 피치 계산
+    const actualDir = this.velocity.clone().normalize();
+    const useDir = this.velocity.lengthSq() > 0.001 ? actualDir : dir;
+
+    // 진행 방향으로 점진 선회
+    const targetRotation = Math.atan2(-useDir.z, useDir.x);
+    let diff = targetRotation - this.group.rotation.y;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    this.group.rotation.y += diff * this.profile.turnLerp;
+
+    // 상하 피치
+    const pitch = useDir.y * 0.4;
+    this.group.rotation.z = THREE.MathUtils.lerp(this.group.rotation.z, pitch, 0.05);
+
+    // 꼬리 흔들기 — 실제 속도에 연동해 감속 시 꼬리도 차분해진다.
+    const speedRatio = THREE.MathUtils.clamp(this.velocity.length() / Math.max(this.baseSpeed * speedMul, 0.001), 0.35, 1.25);
+    const wagFreq = this.profile.tailFreq * speedRatio;
+    const wagAmp = this.profile.tailAmp * (0.75 + speedRatio * 0.25);
     this.tailBase.rotation.y = Math.sin(time * wagFreq) * wagAmp;
 
     // 베타 꼬리지느러미 지연 흔들림
@@ -254,16 +288,14 @@ export class Fish {
 export function spawnFauna(scene: THREE.Scene): Fish[] {
   const fishList: Fish[] = [];
 
-  // §3 스케일 업(0.68→0.78) + §1 H 톤 조율: 채도/명도↓(0xd32f2f→0xc62828=AESTHETIC §2 베타색).
-  // 3차(Codex): 0.82는 시선 과점 → 0.78로 절충(원본 0.68보다 크되 화면을 무겁게 않게).
-  fishList.push(new Fish(scene, 'betta', 0xc62828, [0.78, 0.78, 0.78], 1.4));
+  fishList.push(new Fish(scene, 'betta', 0xc62828, [0.78, 0.78, 0.78], 0.8));
 
   for (let i = 0; i < 6; i++) {
-    fishList.push(new Fish(scene, 'tetra', 0x3a3a3a, [0.45, 0.45, 0.45], 3.8));
+    fishList.push(new Fish(scene, 'tetra', 0x3a3a3a, [0.45, 0.45, 0.45], 2.0));
   }
 
   for (let i = 0; i < 3; i++) {
-    fishList.push(new Fish(scene, 'corydoras', 0xe0c1b3, [0.70, 0.70, 0.70], 2.2)); // §3 바닥 청소부 존재감 0.65→0.70
+    fishList.push(new Fish(scene, 'corydoras', 0xe0c1b3, [0.70, 0.70, 0.70], 1.2)); // §3 바닥 청소부 존재감 0.65→0.70
   }
 
   return fishList;

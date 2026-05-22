@@ -23,7 +23,7 @@ export class Shrimp implements Critter {
 
   constructor(scene: THREE.Scene) {
     this.group.userData = { interactiveType: 'shrimp' };
-    this.speed = 0.5 + random() * 0.4;
+    this.speed = 0.25 + random() * 0.18;
     this.phase = random() * Math.PI * 2;
     this.position = new THREE.Vector3(
       (random() - 0.5) * (tankWidth - 6),
@@ -83,7 +83,10 @@ export class Shrimp implements Critter {
     this.position.y = BOTTOM_Y + 0.5;
     this.group.position.copy(this.position);
     this.group.position.y += Math.sin(time * 5 + this.phase) * 0.03; // 미세 들썩임
-    this.group.rotation.y = Math.atan2(-dir.z, dir.x);
+    const targetRotation = Math.atan2(-dir.z, dir.x);
+    let diff = targetRotation - this.group.rotation.y;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    this.group.rotation.y += diff * 0.06;
     this.antennae.rotation.y = Math.sin(time * 3 + this.phase) * 0.3; // 더듬이 흔들림
   }
 }

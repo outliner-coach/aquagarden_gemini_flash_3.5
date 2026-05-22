@@ -15,15 +15,30 @@ export interface PostFX {
   render(): void;
 }
 
+export const gradeDefaults = {
+  vignette: 0.15,
+  grain: 0.006,
+  saturation: 1.12,
+  warm: 0.0,
+};
+
+export const bloomDefaults = {
+  strength: 0.42,
+  radius: 0.38,
+  threshold: 1.05,
+};
+
+export const toneMappingExposure = 1.08;
+
 // 사진적 마감 셰이더 — 비네팅, 미세 그레인, 디더. tDiffuse는 sRGB(OutputPass 이후).
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
     uFrame: { value: 0 },
-    uVignette: { value: 0.32 },
-    uGrain: { value: 0.022 },
-    uSaturation: { value: 1.08 }, // 감산: 녹색 과채도↓ (1.27 → 1.08, 형광 라임화 방지)
-    uWarm: { value: 0.0 }, // 감산: 황록 캐스트 제거 (0.085 → 0, 톤 시프트 중립화 — 잔여 황록 캐스트 차단)
+    uVignette: { value: gradeDefaults.vignette },
+    uGrain: { value: gradeDefaults.grain },
+    uSaturation: { value: gradeDefaults.saturation },
+    uWarm: { value: gradeDefaults.warm },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -72,7 +87,7 @@ const GradeShader = {
 export function setupRenderer(renderer: THREE.WebGLRenderer): void {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = toneMappingExposure;
 }
 
 export function createPostFX(
@@ -93,9 +108,9 @@ export function createPostFX(
   // threshold를 낮춰 밝은 요소가 잡히되, strength는 절제해 화면 전체 blown-out은 피한다.
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(size.x, size.y),
-    0.5, // strength
-    0.45, // radius (헤일로 반경 축소 → 발광 요소가 비대한 후광을 끌지 않게)
-    1.0, // threshold (감산: 0.72 → 1.0, 초록 계열 전체 번짐 차단 — 네온테트라 emissive·코스틱 하이라이트만)
+    bloomDefaults.strength,
+    bloomDefaults.radius,
+    bloomDefaults.threshold,
   );
   composer.addPass(bloom);
 

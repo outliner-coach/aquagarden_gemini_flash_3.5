@@ -28,11 +28,11 @@ describe('usageMood (§6-2 사용량→어항 연동)', () => {
   });
 
   it('경계값: 60·80·95 에서 단계 전환 (fog·speed 둘 다)', () => {
-    expect(usageMood(60).fogDensityMul).toBeCloseTo(1.15);
-    expect(usageMood(80).fogDensityMul).toBeCloseTo(1.3);
-    expect(usageMood(95).fogDensityMul).toBeCloseTo(1.6);
-    expect(usageMood(60).fishSpeedMul).toBeCloseTo(0.9);
-    expect(usageMood(80).fishSpeedMul).toBeCloseTo(0.78);
-    expect(usageMood(95).fishSpeedMul).toBeCloseTo(0.6);
+    expect(usageMood(60).fogDensityMul).toBeCloseTo(1.08);
+    expect(usageMood(80).fogDensityMul).toBeCloseTo(1.18);
+    expect(usageMood(95).fogDensityMul).toBeCloseTo(1.32);
+    expect(usageMood(60).fishSpeedMul).toBeCloseTo(0.94);
+    expect(usageMood(80).fishSpeedMul).toBeCloseTo(0.86);
+    expect(usageMood(95).fishSpeedMul).toBeCloseTo(0.76);
   });
 });

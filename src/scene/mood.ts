@@ -13,12 +13,12 @@ const CALM: SceneMood = { fogDensityMul: 1, fishSpeedMul: 1 };
 /**
  * 컨텍스트 점유율(%) → 어항 무드(§6-2).
  * - 한도 미상(null)·비정상 → 평온(CALM): 근거 없는 시각 변화를 만들지 않는다.
- * - 여유(<60) 평온 / 경고(60~80) 약간 탁·둔화 / 임박(80~95) 더 탁·둔화 / 한계(95+) 짙음·바닥권.
+ * - 여유(<60) 평온 / 경고(60~80) 아주 약한 신호 / 임박(80~95) 완만한 탁함 / 한계(95+) 명확하지만 과하지 않은 신호.
  */
 export function usageMood(pct: number | null): SceneMood {
   if (pct === null || !Number.isFinite(pct)) return CALM;
-  if (pct >= 95) return { fogDensityMul: 1.6, fishSpeedMul: 0.6 };
-  if (pct >= 80) return { fogDensityMul: 1.3, fishSpeedMul: 0.78 };
-  if (pct >= 60) return { fogDensityMul: 1.15, fishSpeedMul: 0.9 };
+  if (pct >= 95) return { fogDensityMul: 1.32, fishSpeedMul: 0.76 };
+  if (pct >= 80) return { fogDensityMul: 1.18, fishSpeedMul: 0.86 };
+  if (pct >= 60) return { fogDensityMul: 1.08, fishSpeedMul: 0.94 };
   return CALM;
 }

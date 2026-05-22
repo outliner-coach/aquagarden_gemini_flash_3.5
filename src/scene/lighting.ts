@@ -18,11 +18,11 @@ interface ColorTheme {
 // 감산: day의 황록 캐스트를 제거하고 포그를 어두운 청록-그린으로 되돌려 깊이감·붉은 베타 대비를 살린다.
 export const colors: Record<LightMode, ColorTheme> = {
   day: {
-    ambient: 0xbcc4b8, // 거의 중립 세이지 (녹색 우세 제거 — fill의 황록 캐스트 차단)
-    dirLight: 0xfff0c8, // 따뜻한 햇빛
-    topLight: 0xf5efc4, // 따뜻한 수면광
-    fog: 0x0b2026, // 2차(Codex §1 H): 청록 쪽으로 미세 이동(녹<청)해 배경 물색을 식재 녹색과 분리
-    bg: 0x04110f, // 거의 검정에 가까운 어두운 청록
+    ambient: 0xd8eaff, // 맑고 차가운 연청빛 — 밝기보다 투명한 분리감
+    dirLight: 0xffffff, // 순수하고 깨끗한 화이트 햇살
+    topLight: 0xf8ffff, // 순수하지만 살짝 물빛이 도는 수면광
+    fog: 0x173940, // 깨끗하고 투명한 피코크 청록
+    bg: 0x07181d, // 어둡지만 맑은 투명감을 품은 심해 청록
   },
   dusk: {
     ambient: 0xf2cda6,
@@ -40,7 +40,7 @@ export const colors: Record<LightMode, ColorTheme> = {
   },
 };
 
-interface TargetLightSettings {
+export interface TargetLightSettings {
   ambientColor: THREE.Color;
   dirColor: THREE.Color;
   topColor: THREE.Color;
@@ -51,6 +51,22 @@ interface TargetLightSettings {
   topIntensity: number;
   fogDensity: number;
   causticIntensity: number;
+}
+
+export function targetLightSettingsForMode(mode: LightMode): TargetLightSettings {
+  const theme = colors[mode];
+  return {
+    ambientColor: new THREE.Color(theme.ambient),
+    dirColor: new THREE.Color(theme.dirLight),
+    topColor: new THREE.Color(theme.topLight),
+    fogColor: new THREE.Color(theme.fog),
+    bgColor: new THREE.Color(theme.bg),
+    ambientIntensity: mode === 'day' ? 1.12 : mode === 'dusk' ? 0.86 : 0.68,
+    dirIntensity: mode === 'day' ? 1.18 : mode === 'dusk' ? 0.65 : 0.35,
+    topIntensity: mode === 'day' ? 4.8 : mode === 'dusk' ? 3.6 : 4.6,
+    fogDensity: mode === 'day' ? 0.036 : mode === 'dusk' ? 0.038 : 0.044,
+    causticIntensity: mode === 'day' ? 0.52 : mode === 'dusk' ? 0.3 : 0.34,
+  };
 }
 
 // 캔버스로 타일링 가능한 코스틱(물결 광망) 텍스처를 절차적으로 생성한다.
@@ -165,25 +181,7 @@ export class Lighting {
   // 목표 값만 세팅하고, 실제 보간은 렌더 루프의 update()가 처리한다.
   setMode(mode: LightMode): void {
     this.mode = mode;
-    const theme = colors[mode];
-
-    this.target = {
-      ambientColor: new THREE.Color(theme.ambient),
-      dirColor: new THREE.Color(theme.dirLight),
-      topColor: new THREE.Color(theme.topLight),
-      fogColor: new THREE.Color(theme.fog),
-      bgColor: new THREE.Color(theme.bg),
-      // day는 ambient를 낮춰 top 스포트라이트의 코스틱 대비가 살게 한다. night는 칠흑이 아니라
-      // 달빛처럼 읽히도록 fill을 올린다(전·중·후경 실루엣은 보여야 함).
-      // 감산: day ambient를 1.05 → 0.85 로 낮춰 균일 조명을 줄이고 topLight·코스틱 대비를 살린다.
-      ambientIntensity: mode === 'day' ? 0.85 : mode === 'dusk' ? 0.8 : 0.6,
-      dirIntensity: mode === 'day' ? 1.15 : mode === 'dusk' ? 0.65 : 0.35,
-      topIntensity: mode === 'day' ? 5.0 : mode === 'dusk' ? 3.6 : 4.6, // 6.0 → 5.0 (과노출 방지). 밤은 은은하게
-      // 깊이 색 감쇠 — day 포그를 0.032 → 0.045 로 짙게 해 배경을 청록으로 가라앉히고 깊이감을 회복.
-      fogDensity: mode === 'day' ? 0.045 : mode === 'dusk' ? 0.042 : 0.05,
-      // 코스틱 오버레이 강도 — 밝은 day엔 또렷, 어두운 모드엔 은은하게.
-      causticIntensity: mode === 'day' ? 0.48 : mode === 'dusk' ? 0.3 : 0.34,
-    };
+    this.target = targetLightSettingsForMode(mode);
   }
 
   update(renderer: THREE.WebGLRenderer, scene: THREE.Scene, time = 0): void {

@@ -399,8 +399,8 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
     const z = -2.5 + random() * 5;
     const y = getSubstrateHeight(x, z) + 0.1;
     const height = 1.0 + random() * 1.9;
-    // 감산→2차: 중경 라임(0x6fae3f)→올리브(0x6a8540)→더 어두운 올리브(0x5f7838)로 눌러 배경 분리.
-    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x5f7838, 0.05);
+    // 형광 라임으로 돌아가지 않되 약간 더 밝힌 올리브 — 청록 물색 속에서도 잎이 읽히게.
+    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x6b8e42, 0.05);
   }
   // 적색 줄기수초 — 감산: 개수 62 → 44 로 솎고, x 분포 폭을 넓혀(6.5+5 → 5.5+7) '벽'을 분산.
   for (let i = 0; i < 44; i++) {
@@ -427,7 +427,7 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
     const x = -8 + random() * 16;
     const z = -3 + random() * 6;
     const y = getSubstrateHeight(x, z) + 0.25;
-    const green = random() < 0.5 ? 0x456f2a : 0x5a8a33;
+    const green = random() < 0.5 ? 0x4f7d31 : 0x65963a;
     scene.add(createMossClump(new THREE.Vector3(x, y, z), 0.4 + random() * 0.45, green));
   }
 
