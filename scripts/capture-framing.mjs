@@ -2,7 +2,7 @@
 // 에서 결정론적으로 찍어 deriveFraming 의 구도를 검증한다(ADR-010 게이트1·2 입력).
 //
 // 사용: npm run build && node scripts/capture-framing.mjs
-// 출력: phases/0-mvp/captures/framing/{name}_{w}x{h}.png
+// 출력: phases/${CAPTURE_PHASE:-0-mvp}/captures/framing/{name}_{w}x{h}.png
 
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -12,7 +12,9 @@ import { chromium } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
-const OUT_DIR = resolve(root, 'phases/0-mvp/captures/framing');
+// 출력 경로는 env 로 phase 를 받는다(미지정 시 기존 0-mvp 로 하위호환). framing 하위 폴더는 고정.
+const PHASE = process.env.CAPTURE_PHASE ?? '0-mvp';
+const OUT_DIR = resolve(root, `phases/${PHASE}/captures/framing`);
 
 const SEED = 1337;
 const MODE = 'day';

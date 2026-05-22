@@ -2,7 +2,22 @@
   "project": "Aquagarden",
   "phase": "1-aesthetic",
   "steps": [
-    { "step": 0, "name": "aesthetic-rubric", "status": "pending" },
-    { "step": 1, "name": "subtraction-pass", "status": "pending" }
-  ]
+    {
+      "step": 0,
+      "name": "aesthetic-rubric",
+      "status": "completed",
+      "summary": "AESTHETIC.md 감산 루브릭 갱신(§1 무드·§2 팔레트 상한·§5 Fail조건) + 캡처 스크립트 CAPTURE_PHASE/CAPTURE_STEP 파라미터화",
+      "started_at": "2026-05-22T15:00:56+0900",
+      "completed_at": "2026-05-22T15:04:03+0900"
+    },
+    {
+      "step": 1,
+      "name": "subtraction-pass",
+      "status": "completed",
+      "summary": "감산 튜닝(조명·포그·ambient·Bloom / 녹색채도↓·빨간벽 분산·전경밀도↓ / 카메라 후퇴). 게이트1 designer 전항목 Pass, Codex 조건부 GO, 사용자 게이트2 사인오프. 캡처 phases/1-aesthetic/captures/step1/. 2차 정제 후보는 IDEATION §1 H.",
+      "started_at": "2026-05-22T15:04:04+0900",
+      "completed_at": "2026-05-22T15:36:00+0900"
+    }
+  ],
+  "created_at": "2026-05-22T15:00:56+0900"
 }

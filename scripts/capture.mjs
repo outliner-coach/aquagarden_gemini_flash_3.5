@@ -3,7 +3,7 @@
 // (시스템 캐시 chromium, SwiftShader 소프트웨어 렌더)로 헤드리스 캡처한다.
 //
 // 사용: npm run build && npm run capture
-// 출력: phases/0-mvp/captures/step6/{camera}_{mode}.png, clip_front_day.webm
+// 출력: phases/${CAPTURE_PHASE:-0-mvp}/captures/${CAPTURE_STEP:-step6}/{camera}_{mode}.png, clip_front_day.webm
 
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -13,7 +13,10 @@ import { chromium } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
-const OUT_DIR = resolve(root, 'phases/0-mvp/captures/step6');
+// 출력 경로는 env 로 phase·step 을 받는다(미지정 시 기존 0-mvp/step6 으로 하위호환).
+const PHASE = process.env.CAPTURE_PHASE ?? '0-mvp';
+const STEP = process.env.CAPTURE_STEP ?? 'step6';
+const OUT_DIR = resolve(root, `phases/${PHASE}/captures/${STEP}`);
 
 const SEED = 1337;
 const CAMERAS = ['front', 'driftwood', 'foreground'];

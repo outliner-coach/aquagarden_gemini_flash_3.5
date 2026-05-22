@@ -377,10 +377,14 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
   // 4. 수초 — 좌측 녹색 이끼/풀(무성하게), 우측 적색 줄기수초. §2 팔레트.
   //    색을 미세 변주(±)해 단색 균일 회피, 정글의 자연스러운 톤 편차를 낸다.
   const greenish = (): number => {
-    // 톤 변주는 좁게 — 형광 라임 아웃라이어(평면 무광 페이스가 튀어 보임) 회피.
-    const g = 0x4a7e2e;
-    const j = Math.floor((random() - 0.5) * 0x0c0a06);
-    return THREE.MathUtils.clamp(g + j, 0x3a661f, 0x60963a);
+    // 감산: 채도 높은 그린(0x4a7e2e) → 올리브-세이지(0x5a6e44)로 한 단계 낮춤.
+    // 톤 변주는 채널별로 상관(밝은↔어두운 올리브)되게 — 기존 단일 정수 가산은 채널 경계를 넘어
+    // 청·자색 아웃라이어를 만들었다(팔레트 이탈). random() 1회 draw만 유지(결정론 보존).
+    const t = random() - 0.5; // [-0.5, 0.5)
+    const r = THREE.MathUtils.clamp(0x5a + Math.round(t * 0x12), 0x42, 0x6b);
+    const g = THREE.MathUtils.clamp(0x6e + Math.round(t * 0x16), 0x54, 0x8e); // 상한 0x8e=§2 green 상한
+    const b = THREE.MathUtils.clamp(0x44 + Math.round(t * 0x0e), 0x2c, 0x52);
+    return (r << 16) | (g << 8) | b;
   };
   for (let i = 0; i < 78; i++) {
     const x = -10.5 + random() * 5.5;
@@ -394,21 +398,24 @@ export function buildAquascape(scene: THREE.Scene): Aquascape {
     const z = -2.5 + random() * 5;
     const y = getSubstrateHeight(x, z) + 0.1;
     const height = 1.0 + random() * 1.9;
-    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x6fae3f, 0.05);
+    // 감산: 중경 단색 라임(0x6fae3f) → 올리브-세이지(0x6a8540)로 채도↓.
+    createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, 0x6a8540, 0.05);
   }
-  for (let i = 0; i < 62; i++) {
-    const x = 6.5 + random() * 5;
+  // 적색 줄기수초 — 감산: 개수 62 → 44 로 솎고, x 분포 폭을 넓혀(6.5+5 → 5.5+7) '벽'을 분산.
+  for (let i = 0; i < 44; i++) {
+    const x = 5.5 + random() * 7;
     const z = -3.8 + random() * 7;
     const y = getSubstrateHeight(x, z) + 0.2;
     const height = 1.8 + random() * 3.5;
-    // 적색 줄기수초도 톤 변주(자홍~심홍).
-    const red = random() < 0.5 ? 0x9c2f2b : 0xb0432f;
+    // 톤 변주(자홍~심홍) + 일부 더 어둡게 섞어 벽의 균일감을 깬다.
+    const r = random();
+    const red = r < 0.4 ? 0x9c2f2b : r < 0.7 ? 0xb0432f : 0x6e2420;
     createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, red, 0.08);
   }
-  // 전경 카펫 — 키 작고 빽빽한 녹색 풀로 앞쪽 밀도를 채워 깊이 레이어를 강화.
-  for (let i = 0; i < 40; i++) {
+  // 전경 카펫 — 감산: 40 → 30 으로 솎고, 최전경(z<2.5)을 비워 카메라-피사체 사이 '맑은 물' 레이어 확보.
+  for (let i = 0; i < 30; i++) {
     const x = -9 + random() * 18;
-    const z = 1.5 + random() * 3.5; // 카메라 가까운 전경
+    const z = 2.5 + random() * 3; // z 2.5~5.5 (최전경 비움)
     const y = getSubstrateHeight(x, z) + 0.1;
     const height = 0.5 + random() * 0.8;
     createSwayingPlant(scene, animatedPlants, new THREE.Vector3(x, y, z), height, greenish(), 0.05);

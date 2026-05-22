@@ -9,6 +9,9 @@ tsconfig.tsbuildinfo
 .DS_Store
 output/
 
+# OMC 작업 상태·아티팩트
+.omc/
+
 # cloned harness reference (kept on disk, not tracked — has its own .git)
 harness_framework/
 

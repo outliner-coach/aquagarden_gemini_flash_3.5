@@ -14,15 +14,15 @@ interface ColorTheme {
   bg: number;
 }
 
-// §2 팔레트 도출. sample.jpeg = 따뜻하고 무성한 네이처 아쿠아리움.
-// day는 따뜻한 햇빛 + 녹색(청록 아님) 수중 포그로 정글감, dusk는 앰버, night는 달빛 청록.
+// §2 팔레트 도출. sample.jpeg = 차분한 여백 위주의 네이처 아쿠아리움.
+// 감산: day의 황록 캐스트를 제거하고 포그를 어두운 청록-그린으로 되돌려 깊이감·붉은 베타 대비를 살린다.
 export const colors: Record<LightMode, ColorTheme> = {
   day: {
-    ambient: 0xe2e6bc, // 따뜻한 연두-크림 (차가운 민트 제거)
+    ambient: 0xbcc4b8, // 거의 중립 세이지 (녹색 우세 제거 — fill의 황록 캐스트 차단)
     dirLight: 0xfff0c8, // 따뜻한 햇빛
     topLight: 0xf5efc4, // 따뜻한 수면광
-    fog: 0x274320, // 무성한 연두-그린 수중 (청록 틸 완전 탈피, 황록으로)
-    bg: 0x0e2113, // 어두운 따뜻한 녹색
+    fog: 0x0e2218, // 어두운 청록-그린 수중 (배경을 가라앉혀 깊이감 복귀)
+    bg: 0x05110a, // 거의 검정에 가까운 어두운 녹색
   },
   dusk: {
     ambient: 0xf2cda6,
@@ -173,11 +173,12 @@ export class Lighting {
       bgColor: new THREE.Color(theme.bg),
       // day는 ambient를 낮춰 top 스포트라이트의 코스틱 대비가 살게 한다. night는 칠흑이 아니라
       // 달빛처럼 읽히도록 fill을 올린다(전·중·후경 실루엣은 보여야 함).
-      ambientIntensity: mode === 'day' ? 1.05 : mode === 'dusk' ? 0.8 : 0.6,
+      // 감산: day ambient를 1.05 → 0.85 로 낮춰 균일 조명을 줄이고 topLight·코스틱 대비를 살린다.
+      ambientIntensity: mode === 'day' ? 0.85 : mode === 'dusk' ? 0.8 : 0.6,
       dirIntensity: mode === 'day' ? 1.15 : mode === 'dusk' ? 0.65 : 0.35,
-      topIntensity: mode === 'day' ? 6.0 : mode === 'dusk' ? 3.6 : 4.6, // 밤은 은은하게(과한 네온 회피)
-      // 깊이 색 감쇠 — day는 옅게(맑게·따뜻하게), night는 짙게(깊은 청록으로 빨강 흡수).
-      fogDensity: mode === 'day' ? 0.032 : mode === 'dusk' ? 0.042 : 0.05,
+      topIntensity: mode === 'day' ? 5.0 : mode === 'dusk' ? 3.6 : 4.6, // 6.0 → 5.0 (과노출 방지). 밤은 은은하게
+      // 깊이 색 감쇠 — day 포그를 0.032 → 0.045 로 짙게 해 배경을 청록으로 가라앉히고 깊이감을 회복.
+      fogDensity: mode === 'day' ? 0.045 : mode === 'dusk' ? 0.042 : 0.05,
       // 코스틱 오버레이 강도 — 밝은 day엔 또렷, 어두운 모드엔 은은하게.
       causticIntensity: mode === 'day' ? 0.48 : mode === 'dusk' ? 0.3 : 0.34,
     };
